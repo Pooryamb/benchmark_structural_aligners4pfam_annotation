@@ -38,6 +38,10 @@ mkdir -p tmp/
 mmseqs easy-cluster ./data/dbs/pfam_cif_cut/pfam.fasta ./data/dbs/pfam_cif_cut/pfam_clust tmp/pfam_clust --min-seq-id 0.5 -c 0.8 --cov-mode 0
 python scripts/extract_plddt.py --input ./data/pfam_cifs.tar --output ./data/pfam_plddt.json # Extracts plddt from structures
 python scripts/calc_plddt_average_from_json.py # It converts the json of plddts to a tsv file containing the average plddts
-
+make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_clust_reps.tsv" SRC_DB="./data/dbs/pfam_cif_cut/pfam" OUT_DB="./data/dbs/pfam_cif_cut_clust/pfam"
+python scripts/find_pfam_fl_clust_reps.py
+#The next lines will make the clustered version of pfam_fl:
+python scripts/find_pfam_fl_clust_reps.py
+make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_fl_clust_reps.tsv" SRC_DB="./data/dbs/pfam_fl/pfam_fl" OUT_DB="./data/dbs/pfam_fl_clust/pfam_fl"
 ```
 

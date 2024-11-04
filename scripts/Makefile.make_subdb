@@ -1,0 +1,22 @@
+FILENAME := $(notdir $(REP_INFO))
+FOLDSEEK := "foldseek"
+OUT_DIR := $(dir $(OUT_DB))
+
+
+.PHONY: all
+
+all: $(OUT_DB)_ca.dbtype
+
+$(OUT_DB)_keys.tsv:
+	mkdir -p $(OUT_DIR)
+	awk 'NR == FNR { f[$$1] = 1; next; } $$2 in f { print $$1; }'  $(REP_INFO) $(SRC_DB).lookup > $(OUT_DB)_keys.tsv
+
+
+$(OUT_DB)_ca.dbtype: $(OUT_DB)_keys.tsv
+	mkdir -p $(OUT_DIR)
+	$(FOLDSEEK) lndb $(SRC_DB)_h $(SRC_DB)_ss_h
+	$(FOLDSEEK) lndb $(SRC_DB)_h $(SRC_DB)_ca_h
+	$(FOLDSEEK) createsubdb $(OUT_DB)_keys.tsv $(SRC_DB) $(OUT_DB)
+	$(FOLDSEEK) createsubdb $(OUT_DB)_keys.tsv $(SRC_DB)_ss $(OUT_DB)_ss
+	$(FOLDSEEK) createsubdb $(OUT_DB)_keys.tsv $(SRC_DB)_ca $(OUT_DB)_ca
+
