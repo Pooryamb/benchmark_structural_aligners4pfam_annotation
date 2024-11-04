@@ -2,6 +2,9 @@
 
 This repository contains the scripts used for comparing Foldseek and Reseek 
 for the structure-based domain annotation task.
+You require the following libraries for this benchmarking:
+* Pandas (version 2.2.2)
+* Polars (version 1.0.0)
 
 
 To start, make sure that both reseek, foldseek, and mmseqs have been added to 
@@ -33,7 +36,8 @@ Cluster the Pfam database and select the cluster rep with the highest average pl
 foldseek convert2fasta ./data/dbs/pfam_cif_cut/pfam ./data/dbs/pfam_cif_cut/pfam.fasta
 mkdir -p tmp/
 mmseqs easy-cluster ./data/dbs/pfam_cif_cut/pfam.fasta ./data/dbs/pfam_cif_cut/pfam_clust tmp/pfam_clust --min-seq-id 0.5 -c 0.8 --cov-mode 0
-python scripts/extract_plddt.py --input ./data/pfam_cifs.tar --output ./data/pfam_plddt.json #Extracts plddt from structures
+python scripts/extract_plddt.py --input ./data/pfam_cifs.tar --output ./data/pfam_plddt.json # Extracts plddt from structures
+python scripts/calc_plddt_average_from_json.py # It converts the json of plddts to a tsv file containing the average plddts
 
 ```
 
