@@ -33,7 +33,7 @@ Cluster the Pfam database and select the cluster rep with the highest average pl
 ```
 foldseek convert2fasta ./data/dbs/pfam_cif_cut/pfam ./data/dbs/pfam_cif_cut/pfam.fasta
 mkdir -p tmp/
-mmseqs easy-cluster ./data/dbs/pfam_cif_cut/pfam.fasta ./data/dbs/pfam_cif_cut/pfam_clust tmp/pfam_clust --min-seq-id 0.5 -c 0.8 --cov-mode 0
+mmseqs easy-cluster ./data/dbs/pfam_cif_cut/pfam.fasta ./data/dbs/pfam_cif_cut/pfam_clust tmp/pfam_clust --min-seq-id 0.3 -c 0.8 --cov-mode 0 -s 9
 python scripts/extract_plddt.py --input ./data/pfam_cifs.tar --output ./data/pfam_plddt.json # Extracts plddt from structures
 python scripts/calc_plddt_average_from_json.py # It converts the json of plddts to a tsv file containing the average plddts
 make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_clust_reps.tsv" SRC_DB="./data/dbs/pfam_cif_cut/pfam" OUT_DB="./data/dbs/pfam_cif_cut_clust/pfam"
@@ -55,13 +55,33 @@ ls data/dbs/pfam_fs_cut_clust/grp_by_family/PF*/PF*_ca.tsv | xargs -P 20 -I {} s
     base_name=$(basename {} _ca.tsv);
     ./scripts/convert_tsv2fsdb.sh ${1%_ca.tsv} tmp/tsv2fsdb_pfam_logs/${base_name}
 ' -- {}
-# Log files inside tmp/tsv2fsdb_pfam_logs/ can be investigated to make sure that there is no empty file over there. Use the following command in this regard
+# Log files inside tmp/tsv2fsdb_pfam_logs/ can be investigated to make sure that there is no empty file over there. Use the following command in this regard. The files with
+# non-empty logs will go into the filepath specified by output.
 python scripts/check_all_files_are_empty.py --dir "./tmp/tsv2fsdb_pfam_logs/" --output "./tmp/pfam_db_cpy_log.txt"
-# Now, it is the time to cut the full length database:
 
+# Now, it is the time to cut the full length database:
 ./scripts/convert_fsdb2fasta.sh ./data/dbs/pfam_fl_clust/pfam_fl
 python ./scripts/convert_fasta2tsv.py --input_basename "./data/dbs/pfam_fl_clust/pfam_fl"
 python ./scripts/group_pfam_fl_clust_by_family.py #This will break the FL database so that FL proteins of each Pfam would be in a different folder
+mkdir -p tmp/tsv2fsdb_pfamfl_logs
+ls data/dbs/pfam_fl_clust/grp_by_family/PF*/PF*_ca.tsv | xargs -P 20 -I {} sh -c '
+    base_name=$(basename {} _ca.tsv);
+    ./scripts/convert_tsv2fsdb.sh ${1%_ca.tsv} tmp/tsv2fsdb_pfamfl_logs/${base_name}
+' -- {}
+python scripts/check_all_files_are_empty.py --dir "./tmp/tsv2fsdb_pfamfl_logs/" --output "./tmp/pfam_fl_db_cpy_log.txt"
+
+# Now, we start the exhaustive search
+all_pfs=$(ls data/dbs/pfam_fs_cut_clust/grp_by_family/PF*/PF*_ca)
+mkdir -p tmp/pf_pf_exh_alis/
+mkdir -p tmp/fs_exh_search_logs/
+
+for pf_path in ${all_pfs}
+do
+    pf_basename=${pf_path/_ca/}
+    pf_name=$(basename $pf_basename)
+    foldseek easy-search --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddtfull,qaln,taln $pf_basename $pf_basename tmp/pf_pf_exh_alis/${pf_name}.tsv tmp/tmp_pf_pf_exhaustive -v 1 > tmp/fs_exh_search_logs/${pf_name} 2>&1
+done
+
 # I stopped at this point. If I decided to continue, I must first make the databases from tsv files and then conduct the comprehensive search
 # At this point, we have made one database per Pfam family. Next, we will conduct an exhaustive members against members alignment
 
