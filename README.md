@@ -36,14 +36,33 @@ mkdir -p tmp/
 mmseqs easy-cluster ./data/dbs/pfam_cif_cut/pfam.fasta ./data/dbs/pfam_cif_cut/pfam_clust tmp/pfam_clust --min-seq-id 0.3 -c 0.8 --cov-mode 0 -s 9
 python scripts/extract_plddt.py --input ./data/pfam_cifs.tar --output ./data/pfam_plddt.json # Extracts plddt from structures
 python scripts/calc_plddt_average_from_json.py # It converts the json of plddts to a tsv file containing the average plddts
+python ./scripts/select_clusterrep_by_plddt.py
+# First, we select the representatives from cif_cut database
 make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_clust_reps.tsv" SRC_DB="./data/dbs/pfam_cif_cut/pfam" OUT_DB="./data/dbs/pfam_cif_cut_clust/pfam"
-python scripts/find_pfam_fl_clust_reps.py
+# Then, we select the representatives from fs_cut database
+python ./scripts/select_subtsv.py --input_basename "./data/dbs/pfam_fs_cut/pfam" --list2sel ./data/pfam_clust_reps.tsv --output_basename "./data/dbs/pfam_fs_cut_clust/pfam" --remove_cif_extension True
+./scripts/convert_tsv2fsdb.sh ./data/dbs/pfam_fs_cut_clust/pfam ./tmp/make_fscut_db_log
 #The next lines will make the clustered version of pfam_fl:
-python scripts/find_pfam_fl_clust_reps.py
+python scripts/find_pfam_fl_clust_reps.py #This will make a file containing the name of proteins that were used for making PfamSDB
 make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_fl_clust_reps.tsv" SRC_DB="./data/dbs/pfam_fl/pfam_fl" OUT_DB="./data/dbs/pfam_fl_clust/pfam_fl"
 ```
 
+## Searching a subset of Pfam_fls to search against clustered PfamSDB
+```
+shuf --random-source=./data/pfam_fl_clust_reps.tsv -n 1000 ./data/pfam_fl_clust_reps.tsv -o ./data/pfam_fl_sample1.tsv
+make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_fl_sample1.tsv" SRC_DB="./data/dbs/pfam_fl/pfam_fl" OUT_DB="./data/dbs/pfam_fl_sample1/pfam_fl"
+python scripts/convert_tsv2cal.py  --input_basename ./data/dbs/pfam_fs_cut_clust/pfam
+reseek -convert ./data/dbs/pfam_fs_cut_clust/pfam.cal -bca ./data/dbs/pfam_fs_cut_clust/pfam.bca
+python scripts/convert_fsdb2cal.py --input_basename ./data/dbs/pfam_fl_clust/pfam_fl
 
+
+python scripts/convert_fsdb2cal.py --input_basename ./data/dbs/pfam_fl_sample1/pfam_fl
+reseek -convert ./data/dbs/pfam_fl_sample1/pfam_fl.cal -bca ./data/dbs/pfam_fl_sample1/pfam_fl.bca
+foldseek easy-search --exhaustive-search 1 -e inf ./data/dbs/pfam_fl_sample1/pfam_fl ./data/dbs/pfam_fs_cut_clust/pfam ./data/sample1_pfam_foldseek_fscut.tsv tmp/pfam_cifcut
+reseek -search ./data/dbs/pfam_fl_sample1/pfam_fl.bca -db ./data/dbs/pfam_fs_cut_clust/pfam.bca \
+-output ./data/sample1_pfam_reseek.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq \
+-verysensitive -evalue 1e99
+```
 
 
 ## Investigating exhaustive pairwise alignments between members of a domain
