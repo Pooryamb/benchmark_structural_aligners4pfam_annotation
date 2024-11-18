@@ -29,11 +29,10 @@ foldseek createdb data/pfam_cifs.tar ./data/dbs/pfam_cif_cut/pfam
 
 Cluster the Pfam database and select the cluster rep with the highest average plddt
 
-
 ```
 foldseek convert2fasta ./data/dbs/pfam_cif_cut/pfam ./data/dbs/pfam_cif_cut/pfam.fasta
 mkdir -p tmp/
-mmseqs easy-cluster ./data/dbs/pfam_cif_cut/pfam.fasta ./data/dbs/pfam_cif_cut/pfam_clust tmp/pfam_clust --min-seq-id 0.3 -c 0.8 --cov-mode 0 -s 9
+mmseqs easy-cluster ./data/dbs/pfam_cif_cut/pfam.fasta ./data/dbs/pfam_cif_cut/pfam_clust tmp/pfam_clust --min-seq-id 0.4 -c 0.8 --cov-mode 0 -s 9
 python scripts/extract_plddt.py --input ./data/pfam_cifs.tar --output ./data/pfam_plddt.json # Extracts plddt from structures
 python scripts/calc_plddt_average_from_json.py # It converts the json of plddts to a tsv file containing the average plddts
 python ./scripts/select_clusterrep_by_plddt.py
@@ -42,9 +41,66 @@ make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_clust_reps.tsv" SRC_
 # Then, we select the representatives from fs_cut database
 python ./scripts/select_subtsv.py --input_basename "./data/dbs/pfam_fs_cut/pfam" --list2sel ./data/pfam_clust_reps.tsv --output_basename "./data/dbs/pfam_fs_cut_clust/pfam" --remove_cif_extension True
 ./scripts/convert_tsv2fsdb.sh ./data/dbs/pfam_fs_cut_clust/pfam ./tmp/make_fscut_db_log
-#The next lines will make the clustered version of pfam_fl:
-python scripts/find_pfam_fl_clust_reps.py #This will make a file containing the name of proteins that were used for making PfamSDB
-make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_fl_clust_reps.tsv" SRC_DB="./data/dbs/pfam_fl/pfam_fl" OUT_DB="./data/dbs/pfam_fl_clust/pfam_fl"
+```
+
+Select a sample of Pfam to query against PfamSDB
+
+```
+# This will select a sample of cif_cut database
+python scripts/select_random_sample_from_pfam.py --number=25000  # Selects 25000 random seeds to be queried against clustered Pfam
+make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_sample_reps.tsv" SRC_DB="./data/dbs/pfam_cif_cut_clust/pfam" \
+OUT_DB="./data/dbs/pfam_cif_cut_sample/pfam"
+
+# This will select a sample of the fs_cut database
+python ./scripts/select_subtsv.py --input_basename "./data/dbs/pfam_fs_cut_clust/pfam" --list2sel ./data/pfam_clust_reps.tsv --output_basename "./data/dbs/pfam_fs_cut_sample/pfam" --remove_cif_extension True
+./scripts/convert_tsv2fsdb.sh ./data/dbs/pfam_fs_cut_sample/pfam ./tmp/make_fscut_sample_db_log
+```
+
+The following code snippet breaks the sampled data into batches. This is useful for those who want to 
+run the search in different batches. Please note that this step is optional. If you have lots of resources, 
+you can simply go to the search step. There is a python script that can run the search for both chunked and intact data.
+
+```
+CHUNK_NUM=8
+total_lines=$(wc -l < ./data/pfam_sample_reps.tsv)
+lines_per_batch=$(( (total_lines + CHUNK_NUM - 1) / CHUNK_NUM ))
+split -l $lines_per_batch ./data/pfam_sample_reps.tsv ./tmp/sample_reps_
+n=1  
+for file in ./tmp/sample_reps_*; do  
+    mv "$file" ./tmp/sample_reps_b${n}  
+    n=$((n + 1))
+done
+
+for i in $(seq 1 $CHUNK_NUM); do
+    make -f ./scripts/Makefile.make_subdb REP_INFO="./tmp/sample_reps_b${i}" SRC_DB="./data/dbs/pfam_cif_cut_sample/pfam" OUT_DB="./data/dbs/pfam_cif_cut_sample/B${i}/pfam"
+done
+
+
+for i in $(seq 1 $CHUNK_NUM); do
+    python ./scripts/select_subtsv.py --input_basename "./data/dbs/pfam_fs_cut_sample/pfam" --list2sel ./tmp/sample_reps_b${i} --output_basename "./data/dbs/pfam_fs_cut_sample/B${i}/pfam" --remove_cif_extension True
+    ./scripts/convert_tsv2fsdb.sh ./data/dbs/pfam_fs_cut_sample/B${i}/pfam ./tmp/make_fscut_sample_db_log_B${i}
+done
+```
+
+The following snippet, converts each fsdb to cal format and then converts the cal to bca format:
+```
+for file in $(find "./data/dbs/" -iname "*.lookup"); do  
+    python scripts/convert_fsdb2cal.py --input_basename ${file/.lookup/}
+    reseek -convert ${file/.lookup/.cal} -bca ${file/.lookup/.bca}
+done
+```
+
+```
+mkdir -p data/run_times
+mkdir -p data/alis/sample_vs_pfam
+
+
+```
+
+```
+# The next lines will make the clustered version of pfam_fl, which I skip for now
+# python scripts/find_pfam_fl_clust_reps.py #This will make a file containing the name of proteins that were used for making PfamSDB
+# make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_fl_clust_reps.tsv" SRC_DB="./data/dbs/pfam_fl/pfam_fl" OUT_DB="./data/dbs/pfam_fl_clust/pfam_fl"
 ```
 
 ## Searching a subset of Pfam_fls to search against clustered PfamSDB
