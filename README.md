@@ -47,7 +47,7 @@ Select a sample of Pfam to query against PfamSDB
 
 ```
 # This will select a sample of cif_cut database
-python scripts/select_random_sample_from_pfam.py --number=25000  # Selects 25000 random seeds to be queried against clustered Pfam
+python scripts/select_random_sample_from_pfam.py --number=10000  # Selects 10000 random seeds to be queried against clustered Pfam
 make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_sample_reps.tsv" SRC_DB="./data/dbs/pfam_cif_cut_clust/pfam" \
 OUT_DB="./data/dbs/pfam_cif_cut_sample/pfam"
 
@@ -61,7 +61,7 @@ run the search in different batches. Please note that this step is optional. If 
 you can simply go to the search step. There is a python script that can run the search for both chunked and intact data.
 
 ```
-CHUNK_NUM=8
+CHUNK_NUM=16
 total_lines=$(wc -l < ./data/pfam_sample_reps.tsv)
 lines_per_batch=$(( (total_lines + CHUNK_NUM - 1) / CHUNK_NUM ))
 split -l $lines_per_batch ./data/pfam_sample_reps.tsv ./tmp/sample_reps_
@@ -91,11 +91,65 @@ done
 ```
 
 ```
-mkdir -p data/run_times
+mkdir -p data/run_times/sample_vs_pfam
 mkdir -p data/alis/sample_vs_pfam
 
 
+rs_search_command="touch data/run_times/sample_vs_pfam/reseek_started.txt?;
+reseek -search \
+./data/dbs/pfam_cif_cut_sample/pfam.bca# \
+-db ./data/dbs/pfam_cif_cut_clust/pfam.bca \
+-output data/alis/sample_vs_pfam/reseek.tsv? \
+-columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq \
+-verysensitive -evalue 1e99;
+touch data/run_times/sample_vs_pfam/reseek_ended.txt?"
+
+fs_cut_search_command="touch data/run_times/sample_vs_pfam/fs_cut_started.txt?;
+foldseek easy-search --exhaustive-search 1 -e inf \
+./data/dbs/pfam_fs_cut_sample/pfam# ./data/dbs/pfam_fs_cut_clust/pfam \
+data/alis/sample_vs_pfam/fs_cut.tsv? tmp/pfam_fs_cut?;
+touch data/run_times/sample_vs_pfam/fs_cut_ended.txt?"
+
+cif_cut_search_command="touch data/run_times/sample_vs_pfam/cif_cut_started.txt?;
+foldseek easy-search --exhaustive-search 1 -e inf \
+./data/dbs/pfam_cif_cut_sample/pfam# ./data/dbs/pfam_cif_cut_clust/pfam \
+data/alis/sample_vs_pfam/cif_cut.tsv? tmp/pfam_cif_cut?; 
+touch data/run_times/sample_vs_pfam/cif_cut_ended.txt?"
+
+tm_search_command="touch data/run_times/sample_vs_pfam/tm_started.txt?;
+foldseek easy-search --exhaustive-search 1 -e inf \
+./data/dbs/pfam_cif_cut_sample/pfam# ./data/dbs/pfam_cif_cut_clust/pfam \
+data/alis/sample_vs_pfam/cif_cut.tsv? tmp/pfam_cif_cut? \
+--alignment-type 1 --tmscore-threshold 0.0 \
+--format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore;
+touch data/run_times/sample_vs_pfam/tm_ended.txt?"
+
+mm_search_command="touch data/run_times/sample_vs_pfam/mm_started.txt?;
+mmseqs easy-search --prefilter-mode 2 -e inf \
+./data/dbs/pfam_cif_cut_sample/pfam.fasta# ./data/dbs/pfam_cif_cut_clust/pfam.fasta \
+data/alis/sample_vs_pfam/mm.tsv? tmp/pfam_mm?;
+touch data/run_times/sample_vs_pfam/mm_ended.txt?"
+
+
+python scripts/run_or_submit_command_job.py --command "$mm_search_command" --job_scheduler \
+--time "00:30:00" --add_default_header --batches $CHUNK_NUM --job_name mm_search
+
+python scripts/run_or_submit_command_job.py --command "$fs_cut_search_command" --job_scheduler \
+--time "1:00:00" --add_default_header --batches $CHUNK_NUM --job_name fs_cut_search
+
+python scripts/run_or_submit_command_job.py --command "$cif_cut_search_command" --job_scheduler \
+--time "1:00:00" --add_default_header --batches $CHUNK_NUM --job_name cif_cut_search
+
+python scripts/run_or_submit_command_job.py --command "$rs_search_command" --job_scheduler \
+--time "6:00:00" --add_default_header --batches $CHUNK_NUM --job_name rs_search
+
+python scripts/run_or_submit_command_job.py --command "$tm_search_command" --job_scheduler \
+--time "12:00:00" --add_default_header --batches $CHUNK_NUM --job_name tm_search
 ```
+
+
+
+
 
 ```
 # The next lines will make the clustered version of pfam_fl, which I skip for now
