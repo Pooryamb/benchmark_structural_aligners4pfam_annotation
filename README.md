@@ -122,7 +122,7 @@ foldseek easy-search --exhaustive-search 1 -e inf \
 data/alis/sample_vs_pfam/tm.tsv? tmp/pfam_tm? \
 --alignment-type 1 --tmscore-threshold 0.0 \
 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore;
-touch data/run_times/sample_vs_pfam/tm_ended.txt?
+touch data/run_times/sample_vs_pfam/tm_ended.txt?"
 
 mm_search_command="touch data/run_times/sample_vs_pfam/mm_started.txt?;
 mmseqs easy-search --prefilter-mode 2 -e inf \
