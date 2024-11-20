@@ -93,7 +93,7 @@ done
 ```
 mkdir -p data/run_times/sample_vs_pfam
 mkdir -p data/alis/sample_vs_pfam
-
+mkdir -p ./tmp/alidbs/
 
 rs_search_command="touch data/run_times/sample_vs_pfam/reseek_started.txt?;
 reseek -search \
@@ -119,10 +119,10 @@ touch data/run_times/sample_vs_pfam/cif_cut_ended.txt?"
 tm_search_command="touch data/run_times/sample_vs_pfam/tm_started.txt?;
 foldseek easy-search --exhaustive-search 1 -e inf \
 ./data/dbs/pfam_cif_cut_sample/pfam# ./data/dbs/pfam_cif_cut_clust/pfam \
-data/alis/sample_vs_pfam/cif_cut.tsv? tmp/pfam_cif_cut? \
+data/alis/sample_vs_pfam/tm.tsv? tmp/pfam_tm? \
 --alignment-type 1 --tmscore-threshold 0.0 \
 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore;
-touch data/run_times/sample_vs_pfam/tm_ended.txt?"
+touch data/run_times/sample_vs_pfam/tm_ended.txt?
 
 mm_search_command="touch data/run_times/sample_vs_pfam/mm_started.txt?;
 mmseqs easy-search --prefilter-mode 2 -e inf \
@@ -132,16 +132,16 @@ touch data/run_times/sample_vs_pfam/mm_ended.txt?"
 
 
 python scripts/run_or_submit_command_job.py --command "$mm_search_command" --job_scheduler \
---time "00:30:00" --add_default_header --batches $CHUNK_NUM --job_name mm_search
+--time "00:15:00" --add_default_header --batches $CHUNK_NUM --job_name mm_search
 
 python scripts/run_or_submit_command_job.py --command "$fs_cut_search_command" --job_scheduler \
---time "1:00:00" --add_default_header --batches $CHUNK_NUM --job_name fs_cut_search
+--time "00:15:00" --add_default_header --batches $CHUNK_NUM --job_name fs_cut_search
 
 python scripts/run_or_submit_command_job.py --command "$cif_cut_search_command" --job_scheduler \
---time "1:00:00" --add_default_header --batches $CHUNK_NUM --job_name cif_cut_search
+--time "00:15:00" --add_default_header --batches $CHUNK_NUM --job_name cif_cut_search
 
 python scripts/run_or_submit_command_job.py --command "$rs_search_command" --job_scheduler \
---time "6:00:00" --add_default_header --batches $CHUNK_NUM --job_name rs_search
+--time "2:00:00" --add_default_header --batches $CHUNK_NUM --job_name rs_search
 
 python scripts/run_or_submit_command_job.py --command "$tm_search_command" --job_scheduler \
 --time "12:00:00" --add_default_header --batches $CHUNK_NUM --job_name tm_search
