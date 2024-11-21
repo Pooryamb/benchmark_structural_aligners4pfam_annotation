@@ -56,9 +56,11 @@ python ./scripts/select_subtsv.py --input_basename "./data/dbs/pfam_fs_cut_clust
 ./scripts/convert_tsv2fsdb.sh ./data/dbs/pfam_fs_cut_sample/pfam ./tmp/make_fscut_sample_db_log
 ```
 
-The following code snippet breaks the sampled data into batches. This is useful for those who want to 
-run the search in different batches. Please note that this step is optional. If you have lots of resources, 
-you can simply go to the search step. There is a python script that can run the search for both chunked and intact data.
+All-against-all searching takes a long time. I had some limitations regarding the number of hours
+that my job could be run on our computational server. Therefore, I cut each database into smaller
+pieces and search each chunk separately. Please note that although I could search a chunk against
+intact clustered version of Pfam using Foldseek 3Di+AA alignment, I couldn't do it using TM-align
+. So, I will also cut the target database for TM-align.
 
 ```
 CHUNK_NUM=16
@@ -82,6 +84,26 @@ for i in $(seq 1 $CHUNK_NUM); do
 done
 ```
 
+The following snippet is for cutting the clustered version of Pfam. It is needed only for the TM-align. 
+TM-align failed with intact target database for an unknown reason.
+
+```
+T_CHUNK_NUM=4
+total_lines=$(wc -l < ./data/pfam_clust_reps.tsv)
+lines_per_batch=$(( (total_lines + T_CHUNK_NUM - 1) / T_CHUNK_NUM ))
+split -l $lines_per_batch ./data/pfam_clust_reps.tsv ./tmp/clust_reps_
+n=1
+for file in ./tmp/clust_reps_*; do
+    mv "$file" ./tmp/clust_reps_b${n}
+    n=$((n + 1))
+done
+
+for i in $(seq 1 $T_CHUNK_NUM); do
+    make -f ./scripts/Makefile.make_subdb REP_INFO="./tmp/clust_reps_b${i}" SRC_DB="./data/dbs/pfam_cif_cut_clust/pfam" OUT_DB="./data/dbs/pfam_cif_cut_clust/B${i}/pfam"
+done
+```
+
+
 The following snippet, converts each fsdb to cal format and then converts the cal to bca format:
 ```
 for file in $(find "./data/dbs/" -iname "*.lookup"); do  
@@ -91,64 +113,99 @@ done
 ```
 
 ```
-mkdir -p data/run_times/sample_vs_pfam
+mkdir -p tmp/start_end_time/
 mkdir -p data/alis/sample_vs_pfam
 mkdir -p ./tmp/alidbs/
+mkdir -p ./tmp/job_logs/
 
-rs_search_command="touch data/run_times/sample_vs_pfam/reseek_started.txt?;
-reseek -search \
-./data/dbs/pfam_cif_cut_sample/pfam.bca# \
--db ./data/dbs/pfam_cif_cut_clust/pfam.bca \
--output data/alis/sample_vs_pfam/reseek.tsv? \
--columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq \
--verysensitive -evalue 1e99;
-touch data/run_times/sample_vs_pfam/reseek_ended.txt?"
 
-fs_cut_search_command="touch data/run_times/sample_vs_pfam/fs_cut_started.txt?;
-foldseek easy-search --exhaustive-search 1 -e inf \
-./data/dbs/pfam_fs_cut_sample/pfam# ./data/dbs/pfam_fs_cut_clust/pfam \
-data/alis/sample_vs_pfam/fs_cut.tsv? tmp/pfam_fs_cut?;
-touch data/run_times/sample_vs_pfam/fs_cut_ended.txt?"
+sh_path=./tmp/rs_samp_ag_clust_exh_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "reseek -search ./data/dbs/pfam_cif_cut_sample/B${i}/pfam.bca -db ./data/dbs/pfam_cif_cut_clust/pfam.bca -output data/alis/sample_vs_pfam/reseek_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq -verysensitive -evalue 1e99" >> ${sh_path}
+done
 
-cif_cut_search_command="touch data/run_times/sample_vs_pfam/cif_cut_started.txt?;
-foldseek easy-search --exhaustive-search 1 -e inf \
-./data/dbs/pfam_cif_cut_sample/pfam# ./data/dbs/pfam_cif_cut_clust/pfam \
-data/alis/sample_vs_pfam/cif_cut.tsv? tmp/pfam_cif_cut?; 
-touch data/run_times/sample_vs_pfam/cif_cut_ended.txt?"
+
+sh_path=./tmp/fscut_samp_ag_clust_exh_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/dbs/pfam_fs_cut_sample/B${i}/pfam ./data/dbs/pfam_fs_cut_clust/pfam data/alis/sample_vs_pfam/fs_cut_B${i}.tsv tmp/pfam_fs_cut_B${i}" >> ${sh_path}
+done
+
+
+sh_path=./tmp/cifcut_samp_ag_clust_exh_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/dbs/pfam_cif_cut_clust/pfam data/alis/sample_vs_pfam/cif_cut_B${i}.tsv tmp/pfam_cif_cut_B${i}" >> ${sh_path}
+done
+
+
+sh_path=./tmp/mm_samp_ag_clust_exh_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "foldseek easy-search --prefilter-mode 2 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam.fasta ./data/dbs/pfam_cif_cut_clust/pfam.fasta data/alis/sample_vs_pfam/mm_B${i}.tsv tmp/pfam_mm_B${i}" >> ${sh_path}
+done
+
+
+sh_path=./tmp/tm_samp_ag_clust_exh_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do  
+    for j in $(seq 1 $T_CHUNK_NUM); do  
+        "foldseek search --exhaustive-search 1 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/dbs/pfam_cif_cut_clust/B${j}/pfam data/alis/sample_vs_pfam/tm_B${i}_B${j}.tsv tmp/pfam_tm_B${i}_B${j} --alignment-type 1 --tmscore-threshold 0.0 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore" >> ${sh_path}
+    done  
+done  
+
 
 tm_search_command="touch data/run_times/sample_vs_pfam/tm_started.txt?;
-foldseek easy-search --exhaustive-search 1 -e inf \
+foldseek search --exhaustive-search 1 -e inf \
 ./data/dbs/pfam_cif_cut_sample/pfam# ./data/dbs/pfam_cif_cut_clust/pfam \
-data/alis/sample_vs_pfam/tm.tsv? tmp/pfam_tm? \
---alignment-type 1 --tmscore-threshold 0.0 \
+./tmp/alidbs/tm_pfam? tmp/pfam_tm? \
+--alignment-type 1 --tmscore-threshold 0.0 -a;
+foldseek convertalis ./data/dbs/pfam_cif_cut_sample/pfam# ./data/dbs/pfam_cif_cut_clust/pfam \
+./tmp/alidbs/tm_pfam? data/alis/sample_vs_pfam/tm.tsv? \
 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore;
 touch data/run_times/sample_vs_pfam/tm_ended.txt?"
 
-mm_search_command="touch data/run_times/sample_vs_pfam/mm_started.txt?;
-mmseqs easy-search --prefilter-mode 2 -e inf \
-./data/dbs/pfam_cif_cut_sample/pfam.fasta# ./data/dbs/pfam_cif_cut_clust/pfam.fasta \
-data/alis/sample_vs_pfam/mm.tsv? tmp/pfam_mm?;
-touch data/run_times/sample_vs_pfam/mm_ended.txt?"
 
 
-python scripts/run_or_submit_command_job.py --command "$mm_search_command" --job_scheduler \
+
+python scripts/run_or_submit_command_job.py --command "$mm_search_command" --how2run job_scheduler \
 --time "00:15:00" --add_default_header --batches $CHUNK_NUM --job_name mm_search
 
-python scripts/run_or_submit_command_job.py --command "$fs_cut_search_command" --job_scheduler \
+python scripts/run_or_submit_command_job.py --command "$fs_cut_search_command" --how2run job_scheduler \
 --time "00:15:00" --add_default_header --batches $CHUNK_NUM --job_name fs_cut_search
 
-python scripts/run_or_submit_command_job.py --command "$cif_cut_search_command" --job_scheduler \
+python scripts/run_or_submit_command_job.py --command "$cif_cut_search_command" --how2run job_scheduler \
 --time "00:15:00" --add_default_header --batches $CHUNK_NUM --job_name cif_cut_search
 
-python scripts/run_or_submit_command_job.py --command "$rs_search_command" --job_scheduler \
+python scripts/run_or_submit_command_job.py --command "$rs_search_command" --how2run job_scheduler \
 --time "2:00:00" --add_default_header --batches $CHUNK_NUM --job_name rs_search
 
-python scripts/run_or_submit_command_job.py --command "$tm_search_command" --job_scheduler \
+python scripts/run_or_submit_command_job.py --command "$tm_search_command" --how2run job_scheduler \
 --time "12:00:00" --add_default_header --batches $CHUNK_NUM --job_name tm_search
 ```
 
 
+Now, we find sensitivity by finding the number of TPs before the first FP.
+We want to find labels both at family and clan level. So, we need to 
+download the file containing the clan data, and make a fake clan id for 
+those that don't belong to a clan. For such cases, we use the family id
+as the clan id.
 
+```
+wget https://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam37.0/Pfam-A.clans.tsv.gz -P ./tmp # At the time of working on this project, version 37 was downloaded. Feel free to change the version if needed
+gunzip ./tmp/Pfam-A.clans.tsv.gz
+python scripts/process_pf_clans_info.py # This will make a tsv file whose first column is Pfam id and second column is clan id
+```
+
+The next scripts will be used for finding the sensitivity based on the number of FPs before the first TP.
+```
+mkdir -p ./data/first_label_occ
+
+file_paths=$(find ./data/alis/sample_vs_pfam/ -type f -name "*.tsv")
+echo "$file_paths" | parallel "python scripts/find_nonred_labels.py --input {}"
+
+```
 
 
 ```
