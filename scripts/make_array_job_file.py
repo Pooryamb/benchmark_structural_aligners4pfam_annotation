@@ -32,6 +32,5 @@ eval "$command"
 touch tmp/start_end_time/{job_name}_ended_B${{SLURM_ARRAY_TASK_ID}}.txt
 """
 
-
 with open(f"./tmp/{job_name}_slurm_job.sh", 'w') as j_file:
      j_file.write(job_content.format(time=args.time, job_name=job_name, batch_num=commands_num, commands_path=args.input_sh_path))

@@ -151,38 +151,15 @@ sh_path=./tmp/tm_samp_ag_clust_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do  
     for j in $(seq 1 $T_CHUNK_NUM); do  
-        echo "foldseek search --exhaustive-search 1 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/dbs/pfam_cif_cut_clust/B${j}/pfam data/alis/sample_vs_pfam/tm_B${i}_B${j}.tsv tmp/pfam_tm_B${i}_B${j} --alignment-type 1 --tmscore-threshold 0.0 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore" >> ${sh_path}
+        echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/dbs/pfam_cif_cut_clust/B${j}/pfam data/alis/sample_vs_pfam/tm_B${i}_B${j}.tsv tmp/pfam_tm_B${i}_B${j} --alignment-type 1 --tmscore-threshold 0.0 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore" >> ${sh_path}
     done  
 done  
 
+#To run on a single machine:
+#bash $sh_path
+#To run on a machine operated by JOB scheduler:
+#python 
 
-tm_search_command="touch data/run_times/sample_vs_pfam/tm_started.txt?;
-foldseek search --exhaustive-search 1 -e inf \
-./data/dbs/pfam_cif_cut_sample/pfam# ./data/dbs/pfam_cif_cut_clust/pfam \
-./tmp/alidbs/tm_pfam? tmp/pfam_tm? \
---alignment-type 1 --tmscore-threshold 0.0 -a;
-foldseek convertalis ./data/dbs/pfam_cif_cut_sample/pfam# ./data/dbs/pfam_cif_cut_clust/pfam \
-./tmp/alidbs/tm_pfam? data/alis/sample_vs_pfam/tm.tsv? \
---format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore;
-touch data/run_times/sample_vs_pfam/tm_ended.txt?"
-
-
-
-
-python scripts/run_or_submit_command_job.py --command "$mm_search_command" --how2run job_scheduler \
---time "00:15:00" --add_default_header --batches $CHUNK_NUM --job_name mm_search
-
-python scripts/run_or_submit_command_job.py --command "$fs_cut_search_command" --how2run job_scheduler \
---time "00:15:00" --add_default_header --batches $CHUNK_NUM --job_name fs_cut_search
-
-python scripts/run_or_submit_command_job.py --command "$cif_cut_search_command" --how2run job_scheduler \
---time "00:15:00" --add_default_header --batches $CHUNK_NUM --job_name cif_cut_search
-
-python scripts/run_or_submit_command_job.py --command "$rs_search_command" --how2run job_scheduler \
---time "2:00:00" --add_default_header --batches $CHUNK_NUM --job_name rs_search
-
-python scripts/run_or_submit_command_job.py --command "$tm_search_command" --how2run job_scheduler \
---time "12:00:00" --add_default_header --batches $CHUNK_NUM --job_name tm_search
 ```
 
 
