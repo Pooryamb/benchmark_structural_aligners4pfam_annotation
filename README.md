@@ -151,7 +151,7 @@ sh_path=./tmp/tm_samp_ag_clust_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do  
     for j in $(seq 1 $T_CHUNK_NUM); do  
-        "foldseek search --exhaustive-search 1 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/dbs/pfam_cif_cut_clust/B${j}/pfam data/alis/sample_vs_pfam/tm_B${i}_B${j}.tsv tmp/pfam_tm_B${i}_B${j} --alignment-type 1 --tmscore-threshold 0.0 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore" >> ${sh_path}
+        echo "foldseek search --exhaustive-search 1 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/dbs/pfam_cif_cut_clust/B${j}/pfam data/alis/sample_vs_pfam/tm_B${i}_B${j}.tsv tmp/pfam_tm_B${i}_B${j} --alignment-type 1 --tmscore-threshold 0.0 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore" >> ${sh_path}
     done  
 done  
 
