@@ -128,7 +128,7 @@ rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
     echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/dbs/pfam_cif_cut_clust/pfam data/alis/sample_vs_pfam/cif_cut_B${i}.tsv tmp/pfam_cif_cut_B${i}" >> ${sh_path}
 done
-python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
 
 sh_path=./tmp/mm_samp_ag_clust_exh_commands.sh
@@ -136,7 +136,7 @@ rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
     echo "mmseqs easy-search --prefilter-mode 2 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam.fasta ./data/dbs/pfam_cif_cut_clust/pfam.fasta data/alis/sample_vs_pfam/mm_B${i}.tsv tmp/pfam_mm_B${i}" >> ${sh_path}
 done
-python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
 
 sh_path=./tmp/tm_samp_ag_clust_exh_commands.sh
@@ -144,7 +144,7 @@ rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do  
     echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/dbs/pfam_cif_cut_clust/pfam data/alis/sample_vs_pfam/tm_B${i}.tsv tmp/pfam_tm_B${i} --alignment-type 1 --tmscore-threshold 0.0 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore" >> ${sh_path}
 done  
-python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "12:00:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
 
 #To run on a single machine:
