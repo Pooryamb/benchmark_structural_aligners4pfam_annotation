@@ -35,7 +35,7 @@ mkdir -p tmp/
 mmseqs easy-cluster ./data/dbs/pfam_cif_cut/pfam.fasta ./data/dbs/pfam_cif_cut/pfam_clust tmp/pfam_clust --min-seq-id 0.4 -c 0.8 --cov-mode 0 -s 9
 python scripts/extract_plddt.py --input ./data/pfam_cifs.tar --output ./data/pfam_plddt.json # Extracts plddt from structures
 python scripts/calc_plddt_average_from_json.py # It converts the json of plddts to a tsv file containing the average plddts
-python ./scripts/select_clusterrep_by_plddt.py
+python ./scripts/select_clusterrep_by_plddt_and_size.py #It selects the one with highest pLDDT as cluster representative. It also removes domains that are shorter than 10 amino acids
 # First, we select the representatives from cif_cut database
 make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_clust_reps.tsv" SRC_DB="./data/dbs/pfam_cif_cut/pfam" OUT_DB="./data/dbs/pfam_cif_cut_clust/pfam"
 # Then, we select the representatives from fs_cut database
@@ -52,7 +52,7 @@ make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_sample_reps.tsv" SRC
 OUT_DB="./data/dbs/pfam_cif_cut_sample/pfam"
 
 # This will select a sample of the fs_cut database
-python ./scripts/select_subtsv.py --input_basename "./data/dbs/pfam_fs_cut_clust/pfam" --list2sel ./data/pfam_clust_reps.tsv --output_basename "./data/dbs/pfam_fs_cut_sample/pfam" --remove_cif_extension True
+python ./scripts/select_subtsv.py --input_basename "./data/dbs/pfam_fs_cut_clust/pfam" --list2sel ./data/pfam_sample_reps.tsv --output_basename "./data/dbs/pfam_fs_cut_sample/pfam" --remove_cif_extension True
 ./scripts/convert_tsv2fsdb.sh ./data/dbs/pfam_fs_cut_sample/pfam ./tmp/make_fscut_sample_db_log
 ```
 
@@ -84,25 +84,6 @@ for i in $(seq 1 $CHUNK_NUM); do
 done
 ```
 
-The following snippet is for cutting the clustered version of Pfam. It is needed only for the TM-align. 
-TM-align failed with intact target database for an unknown reason.
-
-```
-T_CHUNK_NUM=4
-total_lines=$(wc -l < ./data/pfam_clust_reps.tsv)
-lines_per_batch=$(( (total_lines + T_CHUNK_NUM - 1) / T_CHUNK_NUM ))
-split -l $lines_per_batch ./data/pfam_clust_reps.tsv ./tmp/clust_reps_
-n=1
-for file in ./tmp/clust_reps_*; do
-    mv "$file" ./tmp/clust_reps_b${n}
-    n=$((n + 1))
-done
-
-for i in $(seq 1 $T_CHUNK_NUM); do
-    make -f ./scripts/Makefile.make_subdb REP_INFO="./tmp/clust_reps_b${i}" SRC_DB="./data/dbs/pfam_cif_cut_clust/pfam" OUT_DB="./data/dbs/pfam_cif_cut_clust/B${i}/pfam"
-done
-```
-
 
 The following snippet, converts each fsdb to cal format and then converts the cal to bca format:
 ```
@@ -112,6 +93,12 @@ for file in $(find "./data/dbs/" -iname "*.lookup"); do
 done
 ```
 
+The following part is for searching a sample of domains against the clustered Pfam.
+First, it creates a file containing all of the commands. Then, user can run them
+either regularly or submit them as a job to a machine that has SLURM job scheduler.
+The instructions for running the scripts are found at the end of the code snippet.
+I used the following run times for a cluster with 80 threads: 
+reseek: 1:00:00, mmseqs, fs_cut and cif_cut: 00:15:00, tm_align: 3:00:00
 ```
 mkdir -p tmp/start_end_time/
 mkdir -p data/alis/sample_vs_pfam
@@ -152,13 +139,14 @@ rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do  
     for j in $(seq 1 $T_CHUNK_NUM); do  
         echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/dbs/pfam_cif_cut_clust/B${j}/pfam data/alis/sample_vs_pfam/tm_B${i}_B${j}.tsv tmp/pfam_tm_B${i}_B${j} --alignment-type 1 --tmscore-threshold 0.0 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore" >> ${sh_path}
-    done  
+    done
 done  
 
 #To run on a single machine:
 #bash $sh_path
 #To run on a machine operated by JOB scheduler:
-#python 
+#python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00"; sbatch ./tmp/${sh_path/.sh/_slurm_job.sh}
+#
 
 ```
 
@@ -249,3 +237,39 @@ done
 # At this point, we have made one database per Pfam family. Next, we will conduct an exhaustive members against members alignment
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The following snippet is for cutting the clustered version of Pfam. It was needed only for troubleshooting TM-align failure
+TM-align failed with intact target database for an unknown reason.
+
+```
+T_CHUNK_NUM=4
+total_lines=$(wc -l < ./data/pfam_clust_reps.tsv)
+lines_per_batch=$(( (total_lines + T_CHUNK_NUM - 1) / T_CHUNK_NUM ))                                                                                        split -l $lines_per_batch ./data/pfam_clust_reps.tsv ./tmp/clust_reps_
+n=1
+for file in ./tmp/clust_reps_*; do
+    mv "$file" ./tmp/clust_reps_b${n}
+    n=$((n + 1))
+done
+
+for i in $(seq 1 $T_CHUNK_NUM); do                                                                                                                              make -f ./scripts/Makefile.make_subdb REP_INFO="./tmp/clust_reps_b${i}" SRC_DB="./data/dbs/pfam_cif_cut_clust/pfam" OUT_DB="./data/dbs/pfam_cif_cut_clu$done                                                                                                                                                        ```

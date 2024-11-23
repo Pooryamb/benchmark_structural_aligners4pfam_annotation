@@ -16,6 +16,8 @@ clust_df["afid"] = clust_df["afid"].str.replace(".cif", "")
 
 clust_plddt = clust_df.merge(plddt_df, on="afid")
 clust_new_rep = clust_plddt.groupby("clust_afid").apply(max_avg_plddt, include_groups=False).reset_index(drop=True)
+clust_new_rep["len"] = clust_new_rep["afid"].str.split("-", expand=True)[2].astype(int) - clust_new_rep["afid"].str.split("-", expand=True)[1].astype(int)
+clust_new_rep = clust_new_rep[clust_new_rep["len"] >= 10]
 clust_new_rep["new_rep"] = clust_new_rep["new_rep"] + ".cif"
 clust_new_rep[["new_rep"]].drop_duplicates().to_csv(output_path, header=None, index=None)
 
