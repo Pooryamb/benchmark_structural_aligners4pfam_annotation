@@ -23,15 +23,28 @@ if not args.output:
 clan_info_path = args.pfam_clan_info
 ipr_clan_df = pd.read_csv(clan_info_path, sep="\t")
 
-remove_cif = True
-if (args.remove_cif_ext == "Auto") and ("fs_cut" in args.input):
+if args.remove_cif_ext == "True":
+    remove_cif = True
+elif args.remove_cif_ext == "False":
     remove_cif = False
+elif args.remove_cif_ext == "Auto":
+    if ".cif" in open(args.input).readline().split()[0]:
+        remove_cif = True
+    else:
+        remove_cif = False
 
+if remove_cif:
+    print("cif extensions will be removed")
+else:
+    print("no extension will be removed")
+
+chunksize = 10_000
+#chunks_in_mil = 1_000_000 // chunksize
 selected = []
 i = 0
 for chunk in pd.read_csv(args.input, sep="\t", header=None, chunksize=10_000):
-    if i%100 == 0:
-        print(f"{i} million processed")
+#    if i % chunks_in_mil == 0:
+#        print(f"{i//chunks_in_mil} million processed")
     if remove_cif:
         chunk[0] =  chunk[0].str.replace(".cif", "")
         chunk[1] =  chunk[1].str.replace(".cif", "")

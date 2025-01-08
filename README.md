@@ -169,12 +169,12 @@ python scripts/process_pf_clans_info.py # This will make a tsv file whose first 
 ```
 
 The next scripts will be used for finding the sensitivity based on the number of FPs before the first TP.
+Run time on Niagara Node of Compute Canada: 1 hour. 
 ```
 mkdir -p ./data/first_label_occ
 
 file_paths=$(find ./data/alis/sample_vs_pfam/ -type f -name "*.tsv")
 echo "$file_paths" | parallel "python scripts/find_nonred_labels.py --input {}"
-
 ```
 
 
