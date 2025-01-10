@@ -11,7 +11,7 @@ parser.add_argument(
     type=str,
     required=True,  # Make this argument required
     help="""The path to the basename of the tsv files.
-    It should not include the extension. Only the name should be here"""
+    It should not include the extension. Basename excluding the extension should be here"""
     )
 parser.add_argument(
         '--output_basename',

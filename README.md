@@ -205,76 +205,54 @@ reseek -search ./data/dbs/pfam_fl_sample1/pfam_fl.bca -db ./data/dbs/pfam_fs_cut
 ## Investigating exhaustive pairwise alignments between members of a domain
 ```
 python ./scripts/group_pfamclust_by_family.py #This will make a directory for each family in "data/dbs/pfam_fs_cut_clust/grp_by_family" directory inside each directory, tsv files of the database will be stored
-mkdir -p tmp/tsv2fsdb_pfam_logs
+mkdir -p tmp/logs/mkdb/fam_dbs/rs tmp/logs/mkdb/fam_dbs/fs
 
 ls data/dbs/pfam_fs_cut_clust/grp_by_family/PF*/PF*_ca.tsv | xargs -P 20 -I {} sh -c '
-    base_name=$(basename {} _ca.tsv);
-    ./scripts/convert_tsv2fsdb.sh ${1%_ca.tsv} tmp/tsv2fsdb_pfam_logs/${base_name}
+    name_wo_ext=$(basename {} _ca.tsv);
+    path_wo_ext=${1%_ca.tsv};
+    ./scripts/convert_tsv2fsdb.sh $path_wo_ext tmp/logs/mkdb/fam_dbs/fs/${name_wo_ext};
+    python ./scripts/convert_tsv2cal.py --input_basename $path_wo_ext;
+    reseek -convert ${path_wo_ext}.cal -bca ${path_wo_ext}.bca -threads 1 > tmp/logs/mkdb/fam_dbs/rs/${name_wo_ext} 2>&1;
+    rm ${path_wo_ext}.cal;
+    python scripts/convert_tsv2fasta.py --input_basename $path_wo_ext;
 ' -- {}
-# Log files inside tmp/tsv2fsdb_pfam_logs/ can be investigated to make sure that there is no empty file over there. Use the following command in this regard. The files with
-# non-empty logs will go into the filepath specified by output.
-python scripts/check_all_files_are_empty.py --dir "./tmp/tsv2fsdb_pfam_logs/" --output "./tmp/pfam_db_cpy_log.txt"
 
-# Now, it is the time to cut the full length database:
-./scripts/convert_fsdb2fasta.sh ./data/dbs/pfam_fl_clust/pfam_fl
-python ./scripts/convert_fasta2tsv.py --input_basename "./data/dbs/pfam_fl_clust/pfam_fl"
-python ./scripts/group_pfam_fl_clust_by_family.py #This will break the FL database so that FL proteins of each Pfam would be in a different folder
-mkdir -p tmp/tsv2fsdb_pfamfl_logs
-ls data/dbs/pfam_fl_clust/grp_by_family/PF*/PF*_ca.tsv | xargs -P 20 -I {} sh -c '
-    base_name=$(basename {} _ca.tsv);
-    ./scripts/convert_tsv2fsdb.sh ${1%_ca.tsv} tmp/tsv2fsdb_pfamfl_logs/${base_name}
-' -- {}
-python scripts/check_all_files_are_empty.py --dir "./tmp/tsv2fsdb_pfamfl_logs/" --output "./tmp/pfam_fl_db_cpy_log.txt"
+# Check log files in tmp/logs/mkdb/fam_dbs/ to make sure that everything has proceeded as expected. You can only focus on
+# a few ones with the most/least size
+
 
 # Now, we start the exhaustive search
-all_pfs=$(ls data/dbs/pfam_fs_cut_clust/grp_by_family/PF*/PF*_ca)
-mkdir -p tmp/pf_pf_exh_alis/
-mkdir -p tmp/fs_exh_search_logs/
 
+# First, we create the directories for storing the alignment, temporary files, and log files
+
+for search_type in fs fs3di tm mm rs
+do
+    mkdir -p data/alis/fam_alis/${search_type}/ tmp/fs_tmp/fam_alis/${search_type} tmp/logs/fam_alis/${search_type}
+done
+rm -r tmp/fs_tmp/fam_alis/rs #reseek doesn't need a tmp directory
+
+# Now, we search each family against itself.
+
+all_pfs=$(ls data/dbs/pfam_fs_cut_clust/grp_by_family/PF*/PF*_ca)
 for pf_path in ${all_pfs}
 do
     pf_basename=${pf_path/_ca/}
     pf_name=$(basename $pf_basename)
-    foldseek easy-search --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddtfull,qaln,taln $pf_basename $pf_basename tmp/pf_pf_exh_alis/${pf_name}.tsv tmp/tmp_pf_pf_exhaustive -v 1 > tmp/fs_exh_search_logs/${pf_name} 2>&1
+
+    search_type=fs
+    foldseek easy-search $pf_basename $pf_basename data/alis/fam_alis/${search_type}/${pf_name}.tsv tmp/fs_tmp/fam_alis/${search_type}/${pf_name} --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddtfull,qaln,taln -v 1 > tmp/logs/fam_alis/${search_type}/${pf_name} 2>&1
+
+    search_type=fs3di
+    foldseek easy-search $pf_basename $pf_basename data/alis/fam_alis/${search_type}/${pf_name}.tsv tmp/fs_tmp/fam_alis/${search_type}/${pf_name} --alignment-type 0 --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddtfull,qaln,taln -v 1 > tmp/logs/fam_alis/${search_type}/${pf_name} 2>&1
+
+    search_type=tm
+    foldseek easy-search $pf_basename $pf_basename data/alis/fam_alis/${search_type}/${pf_name}.tsv tmp/fs_tmp/fam_alis/${search_type}/${pf_name} --alignment-type 1 --tmscore-threshold 0.0 --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore,lddtfull,qaln,taln -v 1 > tmp/logs/fam_alis/${search_type}/${pf_name} 2>&1
+
+    search_type=mm
+    mmseqs easy-search ${pf_basename}.fasta ${pf_basename}.fasta data/alis/fam_alis/${search_type}/${pf_name}.tsv tmp/fs_tmp/fam_alis/${search_type}/${pf_name} --prefilter-mode 2 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,qaln,taln -v 1 > tmp/logs/fam_alis/${search_type}/${pf_name} 2>&1
+
+    search_type=rs
+    reseek -search ${pf_basename}.bca -db ${pf_basename}.bca -output data/alis/fam_alis/${search_type}/${pf_name}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq+qrow+trow -verysensitive -evalue 1e99 > tmp/logs/fam_alis/${search_type}/${pf_name} 2>&1
+
 done
-
-# I stopped at this point. If I decided to continue, I must first make the databases from tsv files and then conduct the comprehensive search
-# At this point, we have made one database per Pfam family. Next, we will conduct an exhaustive members against members alignment
-
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-The following snippet is for cutting the clustered version of Pfam. It was needed only for troubleshooting TM-align failure
-TM-align failed with intact target database for an unknown reason.
-
-```
-T_CHUNK_NUM=4
-total_lines=$(wc -l < ./data/pfam_clust_reps.tsv)
-lines_per_batch=$(( (total_lines + T_CHUNK_NUM - 1) / T_CHUNK_NUM ))                                                                                        split -l $lines_per_batch ./data/pfam_clust_reps.tsv ./tmp/clust_reps_
-n=1
-for file in ./tmp/clust_reps_*; do
-    mv "$file" ./tmp/clust_reps_b${n}
-    n=$((n + 1))
-done
-
-for i in $(seq 1 $T_CHUNK_NUM); do                                                                                                                              make -f ./scripts/Makefile.make_subdb REP_INFO="./tmp/clust_reps_b${i}" SRC_DB="./data/dbs/pfam_cif_cut_clust/pfam" OUT_DB="./data/dbs/pfam_cif_cut_clu$done                                                                                                                                                        ```
