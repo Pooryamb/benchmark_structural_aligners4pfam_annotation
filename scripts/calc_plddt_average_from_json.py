@@ -1,7 +1,7 @@
 import pandas as pd
 
-input_path  = "./data/pfam_plddt.json"
-output_path = "./data/pfam_avg_plddt.tsv"
+input_path  = "./data/processed/pfam_plddt.json"
+output_path = "./data/processed/pfam_avg_plddt.tsv"
 
 plddt_list = []
 

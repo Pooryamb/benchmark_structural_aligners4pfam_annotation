@@ -5,9 +5,10 @@ def max_avg_plddt(df):
     df["new_rep"] = max_plddt_afid
     return df
 
-avg_plddt_path = "./data/pfam_avg_plddt.tsv"
-clust_path = "./data/dbs/pfam_cif_cut/pfam_clust_cluster.tsv"
-output_path = "./data/pfam_clust_reps.tsv"
+avg_plddt_path = "./data/processed/pfam_avg_plddt.tsv"
+clust_path = "tmp/alis/pfam_clust/pfam_clust_cluster.tsv"
+#./data/dbs/pfam_cif_cut/pfam_clust_cluster.tsv"
+output_path = "./data/processed/pfam_clust_reps.tsv"
 
 plddt_df = pd.read_csv(avg_plddt_path, sep="\t", header=None, names=["afid", "avg_plddt"])
 clust_df = pd.read_csv(clust_path, sep="\t", header=None, names=["clust_afid", "afid"])

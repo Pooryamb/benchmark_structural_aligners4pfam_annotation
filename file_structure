@@ -1,0 +1,26 @@
+data
+|
+|-- raw
+|  |-- dbs
+|-- processed
+|  
+
+
+
+
+tmp
+|
+|-- timestamps
+|-- alidb
+|-- alis
+|  |-- sample_pf
+|  |-- pf_pf
+|  |--pfam_clust
+|-- fstmp
+|    |-- clust
+|-- logs
+|  |-- makedb
+|    |-- tsv2fsdb
+|-- jobs
+|-- sample_list
+

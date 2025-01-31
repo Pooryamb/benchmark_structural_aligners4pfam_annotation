@@ -11,36 +11,35 @@ To start, make sure that both reseek, foldseek, and mmseqs have been added to
 your $PATH variable. 
 
 
-The tar file of Pfam structures has to be in data/pfam_cifs.tar file. 
-All the databases will be stored in the data/dbs directory.
-The following dbs should be present in data/dbs when the process starts:
-* data/dbs/pfam_fs_cut/pfam :This database can be made by InterProSDB repository. Please note that for making 
+The tar file of Pfam structures has to be in data/raw/pfam_cifs.tar file. 
+All the databases will be stored in the data/raw/dbs directory.
+The following db should be present in data/raw/dbs when the process starts:
+* data/raw/dbs/pfam_fs_cut/pfam :This database can be made by InterProSDB repository. Please note that for making 
 this database, tsv files are converted to the Foldseek database files. The tsv files used for this operation must be inside the copied database.
-* data/dbs/pfam_fl/pfam_fl : This includes the full-length database of the proteins used for making the Pfam database. This database also can be 
-made using the InterProSDB repository. It can be found inside the tmp directory.
-
 
 
 Using the following commands, make the database from cif files
 ```
-mkdir -p data/dbs/pfam_cif_cut
-foldseek createdb data/pfam_cifs.tar ./data/dbs/pfam_cif_cut/pfam
+mkdir -p data/raw/dbs/pfam_cif_cut
+foldseek createdb data/raw/pfam_cifs.tar data/raw/dbs/pfam_cif_cut/pfam
 ```
 
 Cluster the Pfam database and select the cluster rep with the highest average plddt
 
 ```
-foldseek convert2fasta ./data/dbs/pfam_cif_cut/pfam ./data/dbs/pfam_cif_cut/pfam.fasta
-mkdir -p tmp/
-mmseqs easy-cluster ./data/dbs/pfam_cif_cut/pfam.fasta ./data/dbs/pfam_cif_cut/pfam_clust tmp/pfam_clust --min-seq-id 0.4 -c 0.8 --cov-mode 0 -s 9
-python scripts/extract_plddt.py --input ./data/pfam_cifs.tar --output ./data/pfam_plddt.json # Extracts plddt from structures
+foldseek convert2fasta ./data/raw/dbs/pfam_cif_cut/pfam ./data/raw/dbs/pfam_cif_cut/pfam.fasta
+mkdir -p tmp/fstmp/ tmp/alidb tmp/alis/sample_pf tmp/alis/pf_pf tmp/alis/pfam_clust tmp/logs/misc/
+mmseqs easy-cluster ./data/raw/dbs/pfam_cif_cut/pfam.fasta tmp/alis/pfam_clust/pfam_clust tmp/fstmp/clust --min-seq-id 0.4 -c 0.8 --cov-mode 0 -s 9
+mkdir -p ./data/processed/
+python scripts/extract_plddt.py --input ./data/raw/pfam_cifs.tar --output ./data/processed/pfam_plddt.json # Extracts plddt from structures
 python scripts/calc_plddt_average_from_json.py # It converts the json of plddts to a tsv file containing the average plddts
 python ./scripts/select_clusterrep_by_plddt_and_size.py #It selects the one with highest pLDDT as cluster representative. It also removes domains that are shorter than 10 amino acids
 # First, we select the representatives from cif_cut database
-make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_clust_reps.tsv" SRC_DB="./data/dbs/pfam_cif_cut/pfam" OUT_DB="./data/dbs/pfam_cif_cut_clust/pfam"
+make -f ./scripts/Makefile.make_subdb REP_INFO="./data/processed/pfam_clust_reps.tsv" SRC_DB="./data/raw/dbs/pfam_cif_cut/pfam" OUT_DB="./data/raw/dbs/pfam_cif_cut_clust/pfam"
 # Then, we select the representatives from fs_cut database
-python ./scripts/select_subtsv.py --input_basename "./data/dbs/pfam_fs_cut/pfam" --list2sel ./data/pfam_clust_reps.tsv --output_basename "./data/dbs/pfam_fs_cut_clust/pfam" --remove_cif_extension True
-./scripts/convert_tsv2fsdb.sh ./data/dbs/pfam_fs_cut_clust/pfam ./tmp/make_fscut_db_log
+python ./scripts/select_subtsv.py --input_basename "./data/raw/dbs/pfam_fs_cut/pfam" --list2sel ./data/processed/pfam_clust_reps.tsv --output_basename "./data/raw/dbs/pfam_fs_cut_clust/pfam" --remove_cif_extension True
+mkdir -p tmp/logs/makedb/tsv2fsdb
+./scripts/convert_tsv2fsdb.sh ./data/raw/dbs/pfam_fs_cut_clust/pfam tmp/logs/makedb/tsv2fsdb/make_fs_cut_clust_log
 ```
 
 Select a sample of Pfam to query against PfamSDB
@@ -48,48 +47,50 @@ Select a sample of Pfam to query against PfamSDB
 ```
 # This will select a sample of cif_cut database
 python scripts/select_random_sample_from_pfam.py --number=10000  # Selects 10000 random seeds to be queried against clustered Pfam
-make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_sample_reps.tsv" SRC_DB="./data/dbs/pfam_cif_cut_clust/pfam" \
-OUT_DB="./data/dbs/pfam_cif_cut_sample/pfam"
+make -f ./scripts/Makefile.make_subdb REP_INFO="./data/processed/pfam_sample_reps.tsv" SRC_DB="./data/raw/dbs/pfam_cif_cut_clust/pfam" \
+OUT_DB="./data/raw/dbs/pfam_cif_cut_sample/pfam"
 
 # This will select a sample of the fs_cut database
-python ./scripts/select_subtsv.py --input_basename "./data/dbs/pfam_fs_cut_clust/pfam" --list2sel ./data/pfam_sample_reps.tsv --output_basename "./data/dbs/pfam_fs_cut_sample/pfam" --remove_cif_extension True
-./scripts/convert_tsv2fsdb.sh ./data/dbs/pfam_fs_cut_sample/pfam ./tmp/make_fscut_sample_db_log
+python ./scripts/select_subtsv.py --input_basename "./data/raw/dbs/pfam_fs_cut_clust/pfam" \
+--list2sel ./data/processed/pfam_sample_reps.tsv --output_basename "./data/raw/dbs/pfam_fs_cut_sample/pfam" --remove_cif_extension True
+./scripts/convert_tsv2fsdb.sh ./data/raw/dbs/pfam_fs_cut_sample/pfam tmp/logs/makedb/tsv2fsdb/make_fs_cut_sample_log
 ```
 
-All-against-all searching takes a long time. I had some limitations regarding the number of hours
-that my job could be run on our computational server. Therefore, I cut each database into smaller
-pieces and search each chunk separately. Please note that although I could search a chunk against
-intact clustered version of Pfam using Foldseek 3Di+AA alignment, I couldn't do it using TM-align
-. So, I will also cut the target database for TM-align.
-
+All-against-all searching takes a long time. We had some limitations regarding the number of hours
+that the job could be run on our computational server. Therefore, we cut each database into smaller
+pieces and search each chunk separately.
 ```
 CHUNK_NUM=16
-total_lines=$(wc -l < ./data/pfam_sample_reps.tsv)
+total_lines=$(wc -l < ./data/processed/pfam_sample_reps.tsv)
 lines_per_batch=$(( (total_lines + CHUNK_NUM - 1) / CHUNK_NUM ))
-split -l $lines_per_batch ./data/pfam_sample_reps.tsv ./tmp/sample_reps_
+mkdir -p tmp/sample_list
+split -l $lines_per_batch ./data/processed/pfam_sample_reps.tsv ./tmp/sample_list/sample_reps_
+
 n=1  
-for file in ./tmp/sample_reps_*; do  
-    mv "$file" ./tmp/sample_reps_b${n}  
+for file in ./tmp/sample_list/sample_reps_*; do
+    mv "$file" ./tmp/sample_list/sample_reps_b${n}
     n=$((n + 1))
 done
 
 for i in $(seq 1 $CHUNK_NUM); do
-    make -f ./scripts/Makefile.make_subdb REP_INFO="./tmp/sample_reps_b${i}" SRC_DB="./data/dbs/pfam_cif_cut_sample/pfam" OUT_DB="./data/dbs/pfam_cif_cut_sample/B${i}/pfam"
+    make -f ./scripts/Makefile.make_subdb REP_INFO="./tmp/sample_list/sample_reps_b${i}" \
+SRC_DB="./data/raw/dbs/pfam_cif_cut_sample/pfam" OUT_DB="./data/raw/dbs/pfam_cif_cut_sample/B${i}/pfam"
 done
 
 
 for i in $(seq 1 $CHUNK_NUM); do
-    python ./scripts/select_subtsv.py --input_basename "./data/dbs/pfam_fs_cut_sample/pfam" --list2sel ./tmp/sample_reps_b${i} --output_basename "./data/dbs/pfam_fs_cut_sample/B${i}/pfam" --remove_cif_extension True
-    ./scripts/convert_tsv2fsdb.sh ./data/dbs/pfam_fs_cut_sample/B${i}/pfam ./tmp/make_fscut_sample_db_log_B${i}
+    python ./scripts/select_subtsv.py --input_basename "./data/raw/dbs/pfam_fs_cut_sample/pfam" \
+--list2sel ./tmp/sample_list/sample_reps_b${i} --output_basename "./data/raw/dbs/pfam_fs_cut_sample/B${i}/pfam" --remove_cif_extension True
+    ./scripts/convert_tsv2fsdb.sh ./data/raw/dbs/pfam_fs_cut_sample/B${i}/pfam ./tmp/logs/makedb/tsv2fsdb/pfam_fs_cut_sample_B${i}
 done
 ```
 
 
 The following snippet, converts each fsdb to cal format and then converts the cal to bca format:
 ```
-for file in $(find "./data/dbs/" -iname "*.lookup"); do  
-    python scripts/convert_fsdb2cal.py --input_basename ${file/.lookup/}
-    reseek -convert ${file/.lookup/.cal} -bca ${file/.lookup/.bca}
+for file in $(find "./data/raw/dbs/" -iname "*.lookup"); do
+  python scripts/convert_fsdb2cal.py --input_basename ${file/.lookup/}
+  reseek -convert ${file/.lookup/.cal} -bca ${file/.lookup/.bca}
 done
 ```
 
@@ -109,7 +110,7 @@ mkdir -p ./tmp/job_logs/
 sh_path=./tmp/rs_samp_ag_clust_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "reseek -search ./data/dbs/pfam_cif_cut_sample/B${i}/pfam.bca -db ./data/dbs/pfam_cif_cut_clust/pfam.bca -output data/alis/sample_vs_pfam/reseek_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq -verysensitive -evalue 1e99" >> ${sh_path}
+    echo "reseek -search ./data/raw/dbs/pfam_cif_cut_sample/B${i}/pfam.bca -db ./data/raw/dbs/pfam_cif_cut_clust/pfam.bca -output data/alis/sample_vs_pfam/reseek_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq -verysensitive -evalue 1e99" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
@@ -117,7 +118,7 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00
 sh_path=./tmp/fscut_samp_ag_clust_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/dbs/pfam_fs_cut_sample/B${i}/pfam ./data/dbs/pfam_fs_cut_clust/pfam data/alis/sample_vs_pfam/fs_cut_B${i}.tsv tmp/pfam_fs_cut_B${i}" >> ${sh_path}
+    echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/raw/dbs/pfam_fs_cut_sample/B${i}/pfam ./data/raw/dbs/pfam_fs_cut_clust/pfam data/alis/sample_vs_pfam/fs_cut_B${i}.tsv tmp/pfam_fs_cut_B${i}" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
@@ -126,7 +127,7 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00
 sh_path=./tmp/cifcut_samp_ag_clust_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/dbs/pfam_cif_cut_clust/pfam data/alis/sample_vs_pfam/cif_cut_B${i}.tsv tmp/pfam_cif_cut_B${i}" >> ${sh_path}
+    echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/raw/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/raw/dbs/pfam_cif_cut_clust/pfam data/alis/sample_vs_pfam/cif_cut_B${i}.tsv tmp/pfam_cif_cut_B${i}" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
@@ -134,7 +135,7 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:0
 sh_path=./tmp/mm_samp_ag_clust_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "mmseqs easy-search --prefilter-mode 2 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam.fasta ./data/dbs/pfam_cif_cut_clust/pfam.fasta data/alis/sample_vs_pfam/mm_B${i}.tsv tmp/pfam_mm_B${i}" >> ${sh_path}
+    echo "mmseqs easy-search --prefilter-mode 2 -e inf ./data/raw/dbs/pfam_cif_cut_sample/B${i}/pfam.fasta ./data/raw/dbs/pfam_cif_cut_clust/pfam.fasta data/alis/sample_vs_pfam/mm_B${i}.tsv tmp/pfam_mm_B${i}" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
@@ -142,7 +143,7 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:0
 sh_path=./tmp/tm_samp_ag_clust_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do  
-    echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/dbs/pfam_cif_cut_clust/pfam data/alis/sample_vs_pfam/tm_B${i}.tsv tmp/pfam_tm_B${i} --alignment-type 1 --tmscore-threshold 0.0 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore" >> ${sh_path}
+    echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/raw/dbs/pfam_cif_cut_sample/B${i}/pfam ./data/raw/dbs/pfam_cif_cut_clust/pfam data/alis/sample_vs_pfam/tm_B${i}.tsv tmp/pfam_tm_B${i} --alignment-type 1 --tmscore-threshold 0.0 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore" >> ${sh_path}
 done  
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "12:00:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
@@ -181,22 +182,22 @@ echo "$file_paths" | parallel "python scripts/find_nonred_labels.py --input {}"
 ```
 # The next lines will make the clustered version of pfam_fl, which I skip for now
 # python scripts/find_pfam_fl_clust_reps.py #This will make a file containing the name of proteins that were used for making PfamSDB
-# make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_fl_clust_reps.tsv" SRC_DB="./data/dbs/pfam_fl/pfam_fl" OUT_DB="./data/dbs/pfam_fl_clust/pfam_fl"
+# make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_fl_clust_reps.tsv" SRC_DB="./data/raw/dbs/pfam_fl/pfam_fl" OUT_DB="./data/raw/dbs/pfam_fl_clust/pfam_fl"
 ```
 
 ## Searching a subset of Pfam_fls to search against clustered PfamSDB
 ```
 shuf --random-source=./data/pfam_fl_clust_reps.tsv -n 1000 ./data/pfam_fl_clust_reps.tsv -o ./data/pfam_fl_sample1.tsv
-make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_fl_sample1.tsv" SRC_DB="./data/dbs/pfam_fl/pfam_fl" OUT_DB="./data/dbs/pfam_fl_sample1/pfam_fl"
-python scripts/convert_tsv2cal.py  --input_basename ./data/dbs/pfam_fs_cut_clust/pfam
-reseek -convert ./data/dbs/pfam_fs_cut_clust/pfam.cal -bca ./data/dbs/pfam_fs_cut_clust/pfam.bca
-python scripts/convert_fsdb2cal.py --input_basename ./data/dbs/pfam_fl_clust/pfam_fl
+make -f ./scripts/Makefile.make_subdb REP_INFO="./data/pfam_fl_sample1.tsv" SRC_DB="./data/raw/dbs/pfam_fl/pfam_fl" OUT_DB="./data/raw/dbs/pfam_fl_sample1/pfam_fl"
+python scripts/convert_tsv2cal.py  --input_basename ./data/raw/dbs/pfam_fs_cut_clust/pfam
+reseek -convert ./data/raw/dbs/pfam_fs_cut_clust/pfam.cal -bca ./data/raw/dbs/pfam_fs_cut_clust/pfam.bca
+python scripts/convert_fsdb2cal.py --input_basename ./data/raw/dbs/pfam_fl_clust/pfam_fl
 
 
-python scripts/convert_fsdb2cal.py --input_basename ./data/dbs/pfam_fl_sample1/pfam_fl
-reseek -convert ./data/dbs/pfam_fl_sample1/pfam_fl.cal -bca ./data/dbs/pfam_fl_sample1/pfam_fl.bca
-foldseek easy-search --exhaustive-search 1 -e inf ./data/dbs/pfam_fl_sample1/pfam_fl ./data/dbs/pfam_fs_cut_clust/pfam ./data/sample1_pfam_foldseek_fscut.tsv tmp/pfam_cifcut
-reseek -search ./data/dbs/pfam_fl_sample1/pfam_fl.bca -db ./data/dbs/pfam_fs_cut_clust/pfam.bca \
+python scripts/convert_fsdb2cal.py --input_basename ./data/raw/dbs/pfam_fl_sample1/pfam_fl
+reseek -convert ./data/raw/dbs/pfam_fl_sample1/pfam_fl.cal -bca ./data/raw/dbs/pfam_fl_sample1/pfam_fl.bca
+foldseek easy-search --exhaustive-search 1 -e inf ./data/raw/dbs/pfam_fl_sample1/pfam_fl ./data/raw/dbs/pfam_fs_cut_clust/pfam ./data/sample1_pfam_foldseek_fscut.tsv tmp/pfam_cifcut
+reseek -search ./data/raw/dbs/pfam_fl_sample1/pfam_fl.bca -db ./data/raw/dbs/pfam_fs_cut_clust/pfam.bca \
 -output ./data/sample1_pfam_reseek.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq \
 -verysensitive -evalue 1e99
 ```
@@ -204,10 +205,11 @@ reseek -search ./data/dbs/pfam_fl_sample1/pfam_fl.bca -db ./data/dbs/pfam_fs_cut
 
 ## Investigating exhaustive pairwise alignments between members of a domain
 ```
-python ./scripts/group_pfamclust_by_family.py #This will make a directory for each family in "data/dbs/pfam_fs_cut_clust/grp_by_family" directory inside each directory, tsv files of the database will be stored
+python ./scripts/group_pfamclust_by_family.py #This will make a directory for each family in "data/raw/dbs/pfam_fs_cut_clust/grp_by_family" directory 
+# inside each directory, tsv files of the database will be stored
 mkdir -p tmp/logs/mkdb/fam_dbs/rs tmp/logs/mkdb/fam_dbs/fs
 
-ls data/dbs/pfam_fs_cut_clust/grp_by_family/PF*/PF*_ca.tsv | xargs -P 20 -I {} sh -c '
+ls data/raw/dbs/pfam_fs_cut_clust/grp_by_family/PF*/PF*_ca.tsv | xargs -P 20 -I {} sh -c '
     name_wo_ext=$(basename {} _ca.tsv);
     path_wo_ext=${1%_ca.tsv};
     ./scripts/convert_tsv2fsdb.sh $path_wo_ext tmp/logs/mkdb/fam_dbs/fs/${name_wo_ext};
@@ -233,7 +235,7 @@ rm -r tmp/fs_tmp/fam_alis/rs #reseek doesn't need a tmp directory
 
 # Now, we search each family against itself.
 
-all_pfs=$(ls data/dbs/pfam_fs_cut_clust/grp_by_family/PF*/PF*_ca)
+all_pfs=$(ls data/raw/dbs/pfam_fs_cut_clust/grp_by_family/PF*/PF*_ca)
 for pf_path in ${all_pfs}
 do
     pf_basename=${pf_path/_ca/}
