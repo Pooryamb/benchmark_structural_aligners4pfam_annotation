@@ -18,19 +18,19 @@ commands_num = len([x for x in open(args.input_sh_path).readlines() if (x.strip(
 
 job_content = """#!/bin/bash
 #SBATCH --time={time}
-#SBATCH --output=./tmp/job_logs/{job_name}_%a.out
+#SBATCH --output=tmp/logs/search/sample_pf/{job_name}_%a.out
 #SBATCH --array=1-{batch_num}
 
 module load CCEnv StdEnv scipy-stack
 source ~/iprs/bin/activate
 
-touch tmp/start_end_time/{job_name}_started_B${{SLURM_ARRAY_TASK_ID}}.txt
+touch tmp/timestamps/sample_pf/{job_name}_started_B${{SLURM_ARRAY_TASK_ID}}.txt
 
 command=$(sed -n "$((SLURM_ARRAY_TASK_ID + 0))p" {commands_path})
 eval "$command"
 
-touch tmp/start_end_time/{job_name}_ended_B${{SLURM_ARRAY_TASK_ID}}.txt
+touch tmp/timestamps/sample_pf/{job_name}_ended_B${{SLURM_ARRAY_TASK_ID}}.txt
 """
 
-with open(f"./tmp/{job_name}_slurm_job.sh", 'w') as j_file:
+with open(f"tmp/jobs/{job_name}_slurm_job.sh", 'w') as j_file:
      j_file.write(job_content.format(time=args.time, job_name=job_name, batch_num=commands_num, commands_path=args.input_sh_path))

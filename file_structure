@@ -11,7 +11,7 @@ data
 tmp
 |
 |-- timestamps
-|-- alidb
+|-- alidbs
 |-- alis
 |  |-- sample_pf
 |  |-- pf_pf

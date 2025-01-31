@@ -101,24 +101,30 @@ The instructions for running the scripts are found at the end of the code snippe
 I used the following run times for a cluster with 80 threads: 
 reseek: 1:00:00, mmseqs, fs_cut and cif_cut: 00:15:00, tm_align: 3:00:00
 ```
-mkdir -p tmp/start_end_time/
-mkdir -p data/alis/sample_vs_pfam
-mkdir -p ./tmp/alidbs/
-mkdir -p ./tmp/job_logs/
+mkdir -p tmp/timestamps/sample_pf
+mkdir -p tmp/alis/sample_pf
+mkdir -p tmp/alidbs/
+mkdir -p tmp/logs/search/sample_pf
+mkdir -p tmp/jobs
+mkdir -p tmp/fstmp/sample_pf
 
+dbs_path="./data/raw/dbs/"
+alis_path="tmp/alis/sample_pf"
+tmp_path="tmp/fstmp/sample_pf"
 
-sh_path=./tmp/rs_samp_ag_clust_exh_commands.sh
+sh_path=./tmp/jobs/rs_samp_ag_clust_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "reseek -search ./data/raw/dbs/pfam_cif_cut_sample/B${i}/pfam.bca -db ./data/raw/dbs/pfam_cif_cut_clust/pfam.bca -output data/alis/sample_vs_pfam/reseek_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq -verysensitive -evalue 1e99" >> ${sh_path}
+    echo "reseek -search ${dbs_path}/pfam_cif_cut_sample/B${i}/pfam.bca -db ${dbs_path}/pfam_cif_cut_clust/pfam.bca -output ${alis_path}/reseek_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq -verysensitive -evalue 1e99" >> ${sh_path}
 done
+
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
 
-sh_path=./tmp/fscut_samp_ag_clust_exh_commands.sh
+sh_path=./tmp/jobs/fscut_samp_ag_clust_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "foldseek easy-search --exhaustive-search 1 -e inf ./data/raw/dbs/pfam_fs_cut_sample/B${i}/pfam ./data/raw/dbs/pfam_fs_cut_clust/pfam data/alis/sample_vs_pfam/fs_cut_B${i}.tsv tmp/pfam_fs_cut_B${i}" >> ${sh_path}
+    echo "foldseek easy-search --exhaustive-search 1 -e inf ${dbs_path}/pfam_fs_cut_sample/B${i}/pfam ${dbs_path}/pfam_fs_cut_clust/pfam ${alis_path}/fs_cut_B${i}.tsv tmp/pfam_fs_cut_B${i}" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
