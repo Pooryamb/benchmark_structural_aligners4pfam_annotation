@@ -161,7 +161,7 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "12:00:0
 #
 
 ```
-
+## Sensitivity up to the first FP
 
 Now, we find sensitivity by finding the number of TPs before the first FP.
 We want to find labels both at family and clan level. So, we need to 
@@ -170,17 +170,17 @@ those that don't belong to a clan. For such cases, we use the family id
 as the clan id.
 
 ```
-wget https://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam37.0/Pfam-A.clans.tsv.gz -P ./tmp # At the time of working on this project, version 37 was downloaded. Feel free to change the version if needed
-gunzip ./tmp/Pfam-A.clans.tsv.gz
+wget https://ftp.ebi.ac.uk/pub/databases/Pfam/releases/Pfam37.0/Pfam-A.clans.tsv.gz -P ./data/raw/ # At the time of working on this project, version 37 was downloaded. Feel free to change the version if needed
+gunzip ./data/raw/Pfam-A.clans.tsv.gz
 python scripts/process_pf_clans_info.py # This will make a tsv file whose first column is Pfam id and second column is clan id
 ```
 
 The next scripts will be used for finding the sensitivity based on the number of FPs before the first TP.
 Run time on Niagara Node of Compute Canada: 1 hour. 
 ```
-mkdir -p ./data/first_label_occ
+mkdir -p data/processed/first_label_occ
 
-file_paths=$(find ./data/alis/sample_vs_pfam/ -type f -name "*.tsv")
+file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "*.tsv")
 echo "$file_paths" | parallel "python scripts/find_nonred_labels.py --input {}"
 ```
 
