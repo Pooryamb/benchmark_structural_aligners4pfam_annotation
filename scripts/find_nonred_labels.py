@@ -16,7 +16,6 @@ parser.add_argument("--remove_cif_ext", type=str, default="Auto", help= "Do you 
 
 args = parser.parse_args()
 
-
 if not args.output:
     args.output = "data/processed/first_label_occ/" + os.path.basename(args.input)
 
@@ -33,23 +32,17 @@ elif args.remove_cif_ext == "Auto":
     else:
         remove_cif = False
 
-if remove_cif:
-    print("cif extensions will be removed")
-else:
-    print("no extension will be removed")
-
 chunksize = 10_000
-#chunks_in_mil = 1_000_000 // chunksize
 selected = []
 i = 0
 for chunk in pd.read_csv(args.input, sep="\t", header=None, chunksize=10_000):
-#    if i % chunks_in_mil == 0:
-#        print(f"{i//chunks_in_mil} million processed")
     if remove_cif:
         chunk[0] =  chunk[0].str.replace(".cif", "")
         chunk[1] =  chunk[1].str.replace(".cif", "")
     chunk["q_pfam"] = chunk[0].str.split("-", expand=True)[3]
     chunk["t_pfam"] = chunk[1].str.split("-", expand=True)[3]
+    chunk = chunk.reset_index(names=['row_num'])
+
     chunk = chunk.merge(ipr_clan_df, left_on="q_pfam", right_on="pfam").rename(columns={"clan": "q_clan"}).drop(columns=["pfam"])
     chunk = chunk.merge(ipr_clan_df, left_on="t_pfam", right_on="pfam").rename(columns={"clan": "t_clan"}).drop(columns=["pfam"])
     chunk["pfam_label"] = (chunk["q_pfam"] == chunk["t_pfam"])
@@ -58,7 +51,8 @@ for chunk in pd.read_csv(args.input, sep="\t", header=None, chunksize=10_000):
     first_occ = chunk.drop_duplicates([0, "pfam_label", "clan_label"])
     selected.append(first_occ)
 
+
 selected_df = pd.concat(selected)
 selected_df = selected_df.drop_duplicates([0, "pfam_label", "clan_label"])
 
-selected_df.to_csv(args.output, sep="\t", header=None, index=True)
+selected_df.to_csv(args.output, sep="\t", header=None, index=False)
