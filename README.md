@@ -240,29 +240,51 @@ rm -r tmp/fstmp/fam_alis/rs #reseek doesn't need a tmp directory
 
 # Now, we search each family against itself.
 
-all_pfs=$(ls data/raw/dbs/pfam_fs_cut_clust/grp_by_family/PF*/PF*_ca)
-for pf_path in ${all_pfs}
-do
-    pf_basename=${pf_path/_ca/}
-    pf_name=$(basename $pf_basename)
-    tsv_path=tmp/alis/fam_alis/${search_type}/${pf_name}.tsv
-    tmp_path=tmp/fstmp/fam_alis/${search_type}/${pf_name}
-    log_path=tmp/logs/search/fam_alis/${search_type}/${pf_name}
+all_pfs=$(find data/raw/dbs/pfam_fs_cut_clust/grp_by_family/ -type f -name '*_ca')  
+for pf_path in ${all_pfs}  
+do  
+    pf_basename=${pf_path%"_ca"}  
+    pf_name=$(basename $pf_basename)  
 
-    search_type=fs
-    foldseek easy-search $pf_basename $pf_basename $tsv_path $tmp_path --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddtfull,qaln,taln -v 1 > $log_path 2>&1
+    # Search types  
+    for search_type in fs fs3di tm mm rs  
+    do  
+        tsv_path=tmp/alis/fam_alis/${search_type}/${pf_name}.tsv  
+        tmp_path=tmp/fstmp/fam_alis/${search_type}/${pf_name}  
+        log_path=tmp/logs/search/fam_alis/${search_type}/${pf_name}_${search_type}.log  
 
-    search_type=fs3di
-    foldseek easy-search $pf_basename $pf_basename $tsv_path $tmp_path --alignment-type 0 --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddtfull,qaln,taln -v 1 > $log_path 2>&1
-
-    search_type=tm
-    foldseek easy-search $pf_basename $pf_basename $tsv_path $tmp_path --alignment-type 1 --tmscore-threshold 0.0 --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore,lddtfull,qaln,taln -v 1 > $log_path 2>&1
-
-    search_type=mm
-    mmseqs easy-search ${pf_basename}.fasta ${pf_basename}.fasta $tsv_path $tmp_path --prefilter-mode 2 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,qaln,taln -v 1 > $log_path 2>&1
-
-    search_type=rs
-    reseek -search ${pf_basename}.bca -db ${pf_basename}.bca -output $tsv_path -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq+qrow+trow -verysensitive -evalue 1e99 > $log_path 2>&1
-
+        # Perform searches based on type  
+        case $search_type in  
+            fs)  
+                foldseek easy-search $pf_basename $pf_basename $tsv_path $tmp_path \
+                    --exhaustive-search 1 -e inf \
+                    --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddtfull,qaln,taln \
+                    -v 1 > $log_path 2>&1  
+                ;;  
+            fs3di)  
+                foldseek easy-search $pf_basename $pf_basename $tsv_path $tmp_path \
+                    --alignment-type 0 --exhaustive-search 1 -e inf \
+                    --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddtfull,qaln,taln \
+                    -v 1 > $log_path 2>&1  
+                ;;  
+            tm)  
+                foldseek easy-search $pf_basename $pf_basename $tsv_path $tmp_path \
+                    --alignment-type 1 --tmscore-threshold 0.0 --exhaustive-search 1 -e inf \
+                    --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore,lddtfull,qaln,taln \
+                    -v 1 > $log_path 2>&1  
+                ;;  
+            mm)  
+                mmseqs easy-search ${pf_basename}.fasta ${pf_basename}.fasta $tsv_path $tmp_path \
+                    --prefilter-mode 2 -e inf \
+                    --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,qaln,taln \
+                    -v 1 > $log_path 2>&1  
+                ;;  
+            rs)  
+                reseek -search ${pf_basename}.bca -db ${pf_basename}.bca -output $tsv_path \
+                    -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq+qrow+trow \
+                    -verysensitive -evalue 1e99 > $log_path 2>&1  
+                ;;  
+        esac  
+    done  
 done
 ```
