@@ -1,7 +1,8 @@
 import pandas as pd
 import os
 
-base_path = "./data/dbs/pfam_fs_cut_clust/"
+base_path = "./data/raw/dbs/pfam_fs_cut_clust/"
+
 df_h = pd.read_csv(f"{base_path}/pfam_h.tsv", sep="\t", header=None, index_col=0)
 df_seq = pd.read_csv(f"{base_path}/pfam.tsv", sep="\t", header=None, index_col=0)
 df_ss = pd.read_csv(f"{base_path}/pfam_ss.tsv", sep="\t", header=None, index_col=0)

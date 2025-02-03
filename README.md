@@ -213,31 +213,30 @@ reseek -search ./data/raw/dbs/pfam_fl_sample1/pfam_fl.bca -db ./data/raw/dbs/pfa
 ```
 python ./scripts/group_pfamclust_by_family.py #This will make a directory for each family in "data/raw/dbs/pfam_fs_cut_clust/grp_by_family" directory 
 # inside each directory, tsv files of the database will be stored
-mkdir -p tmp/logs/mkdb/fam_dbs/rs tmp/logs/mkdb/fam_dbs/fs
+mkdir -p tmp/logs/makedb/fam_dbs/rs tmp/logs/makedb/fam_dbs/fs
 
 ls data/raw/dbs/pfam_fs_cut_clust/grp_by_family/PF*/PF*_ca.tsv | xargs -P 20 -I {} sh -c '
     name_wo_ext=$(basename {} _ca.tsv);
     path_wo_ext=${1%_ca.tsv};
-    ./scripts/convert_tsv2fsdb.sh $path_wo_ext tmp/logs/mkdb/fam_dbs/fs/${name_wo_ext};
+    ./scripts/convert_tsv2fsdb.sh $path_wo_ext tmp/logs/makedb/fam_dbs/fs/${name_wo_ext};
     python ./scripts/convert_tsv2cal.py --input_basename $path_wo_ext;
-    reseek -convert ${path_wo_ext}.cal -bca ${path_wo_ext}.bca -threads 1 > tmp/logs/mkdb/fam_dbs/rs/${name_wo_ext} 2>&1;
+    reseek -convert ${path_wo_ext}.cal -bca ${path_wo_ext}.bca -threads 1 > tmp/logs/makedb/fam_dbs/rs/${name_wo_ext} 2>&1;
     rm ${path_wo_ext}.cal;
     python scripts/convert_tsv2fasta.py --input_basename $path_wo_ext;
 ' -- {}
 
-# Check log files in tmp/logs/mkdb/fam_dbs/ to make sure that everything has proceeded as expected. You can only focus on
+# Check log files in tmp/logs/makedb/fam_dbs/ to make sure that everything has proceeded as expected. You can only focus on
 # a few ones with the most/least size
 
 
 # Now, we start the exhaustive search
 
 # First, we create the directories for storing the alignment, temporary files, and log files
-
 for search_type in fs fs3di tm mm rs
 do
-    mkdir -p data/alis/fam_alis/${search_type}/ tmp/fs_tmp/fam_alis/${search_type} tmp/logs/fam_alis/${search_type}
+    mkdir -p tmp/alis/fam_alis/${search_type}/ tmp/fstmp/fam_alis/${search_type} tmp/logs/search/fam_alis/${search_type}
 done
-rm -r tmp/fs_tmp/fam_alis/rs #reseek doesn't need a tmp directory
+rm -r tmp/fstmp/fam_alis/rs #reseek doesn't need a tmp directory
 
 # Now, we search each family against itself.
 
@@ -246,21 +245,24 @@ for pf_path in ${all_pfs}
 do
     pf_basename=${pf_path/_ca/}
     pf_name=$(basename $pf_basename)
+    tsv_path=tmp/alis/fam_alis/${search_type}/${pf_name}.tsv
+    tmp_path=tmp/fstmp/fam_alis/${search_type}/${pf_name}
+    log_path=tmp/logs/search/fam_alis/${search_type}/${pf_name}
 
     search_type=fs
-    foldseek easy-search $pf_basename $pf_basename data/alis/fam_alis/${search_type}/${pf_name}.tsv tmp/fs_tmp/fam_alis/${search_type}/${pf_name} --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddtfull,qaln,taln -v 1 > tmp/logs/fam_alis/${search_type}/${pf_name} 2>&1
+    foldseek easy-search $pf_basename $pf_basename $tsv_path $tmp_path --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddtfull,qaln,taln -v 1 > $log_path 2>&1
 
     search_type=fs3di
-    foldseek easy-search $pf_basename $pf_basename data/alis/fam_alis/${search_type}/${pf_name}.tsv tmp/fs_tmp/fam_alis/${search_type}/${pf_name} --alignment-type 0 --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddtfull,qaln,taln -v 1 > tmp/logs/fam_alis/${search_type}/${pf_name} 2>&1
+    foldseek easy-search $pf_basename $pf_basename $tsv_path $tmp_path --alignment-type 0 --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,lddtfull,qaln,taln -v 1 > $log_path 2>&1
 
     search_type=tm
-    foldseek easy-search $pf_basename $pf_basename data/alis/fam_alis/${search_type}/${pf_name}.tsv tmp/fs_tmp/fam_alis/${search_type}/${pf_name} --alignment-type 1 --tmscore-threshold 0.0 --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore,lddtfull,qaln,taln -v 1 > tmp/logs/fam_alis/${search_type}/${pf_name} 2>&1
+    foldseek easy-search $pf_basename $pf_basename $tsv_path $tmp_path --alignment-type 1 --tmscore-threshold 0.0 --exhaustive-search 1 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore,lddtfull,qaln,taln -v 1 > $log_path 2>&1
 
     search_type=mm
-    mmseqs easy-search ${pf_basename}.fasta ${pf_basename}.fasta data/alis/fam_alis/${search_type}/${pf_name}.tsv tmp/fs_tmp/fam_alis/${search_type}/${pf_name} --prefilter-mode 2 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,qaln,taln -v 1 > tmp/logs/fam_alis/${search_type}/${pf_name} 2>&1
+    mmseqs easy-search ${pf_basename}.fasta ${pf_basename}.fasta $tsv_path $tmp_path --prefilter-mode 2 -e inf --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,qaln,taln -v 1 > $log_path 2>&1
 
     search_type=rs
-    reseek -search ${pf_basename}.bca -db ${pf_basename}.bca -output data/alis/fam_alis/${search_type}/${pf_name}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq+qrow+trow -verysensitive -evalue 1e99 > tmp/logs/fam_alis/${search_type}/${pf_name} 2>&1
+    reseek -search ${pf_basename}.bca -db ${pf_basename}.bca -output $tsv_path -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq+qrow+trow -verysensitive -evalue 1e99 > $log_path 2>&1
 
 done
 ```
