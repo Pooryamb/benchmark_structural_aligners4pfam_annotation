@@ -39,6 +39,8 @@ for chunk in pd.read_csv(args.input, sep="\t", header=None, chunksize=10_000):
     if remove_cif:
         chunk[0] =  chunk[0].str.replace(".cif", "")
         chunk[1] =  chunk[1].str.replace(".cif", "")
+    chunk = chunk.rename(columns={0:"query", 1:"target"})
+
     chunk["q_pfam"] = chunk[0].str.split("-", expand=True)[3]
     chunk["t_pfam"] = chunk[1].str.split("-", expand=True)[3]
     chunk = chunk.reset_index(names=['row_num'])
@@ -55,4 +57,4 @@ for chunk in pd.read_csv(args.input, sep="\t", header=None, chunksize=10_000):
 selected_df = pd.concat(selected)
 selected_df = selected_df.drop_duplicates([0, "pfam_label", "clan_label"])
 
-selected_df.to_csv(args.output, sep="\t", header=None, index=False)
+selected_df.to_csv(args.output, sep="\t", index=False)
