@@ -112,6 +112,7 @@ dbs_path="./data/raw/dbs/"
 alis_path="tmp/alis/sample_pf"
 tmp_path="tmp/fstmp/sample_pf"
 
+mkdir -p tmp/alis/sample_pf_sorted/
 sh_path=./tmp/jobs/rs_samp_ag_clust_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
@@ -120,6 +121,7 @@ done
 
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
+
 
 sh_path=./tmp/jobs/fscut_samp_ag_clust_exh_commands.sh
 rm -f ${sh_path}
@@ -161,6 +163,17 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "12:00:0
 #
 
 ```
+## Sort Reseek output
+In the current version of Reseek, the hits are not necessarily sorted by e-value. So, we need to sort the files based on e-value.
+```
+for i in $(seq 1 $CHUNK_NUM); do
+    sort --parallel=80 --buffer-size=50% -t$'\t' -k1,1 -k10,10g tmp/alis/sample_pf/reseek_B${i}.tsv -o tmp/alis/sample_pf_sorted/reseek_B${i}.tsv
+done
+rm -f tmp/alis/sample_pf/reseek_B*.tsv
+mv tmp/alis/sample_pf_sorted/reseek_B*.tsv tmp/alis/sample_pf/
+rm -rf tmp/alis/sample_pf_sorted/
+```
+
 ## Sensitivity up to the first FP
 
 Now, we find sensitivity by finding the number of TPs before the first FP.

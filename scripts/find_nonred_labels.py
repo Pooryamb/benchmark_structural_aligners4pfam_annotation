@@ -42,7 +42,7 @@ for chunk in pd.read_csv(args.input, sep="\t", header=None, names=ali_header, ch
     if remove_cif:
         chunk["query"] =  chunk["query"].str.replace(".cif", "")
         chunk["target"] = chunk["target"].str.replace(".cif", "")
-
+    chunk = chunk[chunk["query"] != chunk["target"]]  # This removes self-matches
     chunk["q_pfam"] = chunk["query"].str.split("-", expand=True)[3]
     chunk["t_pfam"] = chunk["target"].str.split("-", expand=True)[3]
     chunk = chunk.reset_index(names=['row_num'])
