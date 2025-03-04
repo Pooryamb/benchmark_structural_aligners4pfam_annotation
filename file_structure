@@ -3,7 +3,7 @@ data
 |-- raw
 |  |-- dbs
 |-- processed
-|  
+|  |-- evalue_bins
 
 
 

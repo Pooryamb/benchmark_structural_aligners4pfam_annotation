@@ -2,6 +2,7 @@ import argparse
 import os
 import pandas as pd
 from headers import headers
+from label_pf_clan_chunk import label_pf_clan_chunk
 
 parser = argparse.ArgumentParser(description="This script takes "
     "the output alignment of a tool as input and outputs the sensitivity "
@@ -19,39 +20,8 @@ args = parser.parse_args()
 if not args.output:
     args.output = "data/processed/first_label_occ/" + os.path.basename(args.input)
 
-search_tool = os.path.basename(args.input).split("_B")[0]
-ali_header = headers[search_tool]
-
-clan_info_path = args.pfam_clan_info
-ipr_clan_df = pd.read_csv(clan_info_path, sep="\t")
-
-if args.remove_cif_ext == "True":
-    remove_cif = True
-elif args.remove_cif_ext == "False":
-    remove_cif = False
-elif args.remove_cif_ext == "Auto":
-    if ".cif" in open(args.input).readline().split()[0]:
-        remove_cif = True
-    else:
-        remove_cif = False
-
-chunksize = 10_000
 selected = []
-i = 0
-for chunk in pd.read_csv(args.input, sep="\t", header=None, names=ali_header, chunksize=10_000):
-    if remove_cif:
-        chunk["query"] =  chunk["query"].str.replace(".cif", "")
-        chunk["target"] = chunk["target"].str.replace(".cif", "")
-    chunk = chunk[chunk["query"] != chunk["target"]]  # This removes self-matches
-    chunk["q_pfam"] = chunk["query"].str.split("-", expand=True)[3]
-    chunk["t_pfam"] = chunk["target"].str.split("-", expand=True)[3]
-    chunk = chunk.reset_index(names=['row_num'])
-
-    chunk = chunk.merge(ipr_clan_df, left_on="q_pfam", right_on="pfam").rename(columns={"clan": "q_clan"}).drop(columns=["pfam"])
-    chunk = chunk.merge(ipr_clan_df, left_on="t_pfam", right_on="pfam").rename(columns={"clan": "t_clan"}).drop(columns=["pfam"])
-    chunk["pfam_label"] = (chunk["q_pfam"] == chunk["t_pfam"])
-    chunk["clan_label"] = (chunk["q_clan"] == chunk["t_clan"])
-    i += 1
+for chunk in label_pf_clan_chunk(args.input):
     first_occ = chunk.drop_duplicates(["query", "pfam_label", "clan_label"])
     selected.append(first_occ)
 

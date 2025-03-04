@@ -198,6 +198,18 @@ echo "$file_paths" | parallel "python scripts/find_nonred_labels.py --input {}"
 ```
 
 
+## CVE plot
+For CVE plot, we plot sensitivity vs error for different e-value thresholds. To select e-value threshold,
+we first find the number of rows with each e-value threshold. The following snippet can do this task:
+```
+mkdir -p data/processed/evalue_bins
+file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "*_B*.tsv")
+echo "$file_paths" | parallel "python scripts/find_evalue_stratified_labels.py --input {}"
+
+```
+
+
+
 ```
 # The next lines will make the clustered version of pfam_fl, which I skip for now
 # python scripts/find_pfam_fl_clust_reps.py #This will make a file containing the name of proteins that were used for making PfamSDB
@@ -249,7 +261,7 @@ for search_type in fs fs3di tm mm rs
 do
     mkdir -p tmp/alis/fam_alis/${search_type}/ tmp/fstmp/fam_alis/${search_type} tmp/logs/search/fam_alis/${search_type}
 done
-rm -r tmp/fstmp/fam_alis/rs #reseek doesn't need a tmp directory
+rm -rf tmp/fstmp/fam_alis/rs #reseek doesn't need a tmp directory
 
 # Now, we search each family against itself.
 
