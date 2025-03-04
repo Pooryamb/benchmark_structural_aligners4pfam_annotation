@@ -174,6 +174,16 @@ mv tmp/alis/sample_pf_sorted/reseek_B*.tsv tmp/alis/sample_pf/
 rm -rf tmp/alis/sample_pf_sorted/
 ```
 
+## Seed characteristics
+In this part, characteristics of seeds such as their secondary structure composition, the length normalized number of transitions in secondary structure
+state, and the contact numbers are derived. Later, these will be used for the comparison of performances of the tools.
+Extraction of secondary structure of the seeds requires downloading the cif files of the domain instances from the AlphaFoldDB which is time consuming.
+```
+./scripts/extract_ss_pfam.sh  #Extracts the secondary structure of the full length proteins of seeds.
+
+```
+
+
 ## Sensitivity up to the first FP
 
 Now, we find sensitivity by finding the number of TPs before the first FP.
@@ -195,6 +205,15 @@ mkdir -p data/processed/first_label_occ
 
 file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "*.tsv")
 echo "$file_paths" | parallel "python scripts/find_nonred_labels.py --input {}"
+```
+
+## Seed characteristics
+The following commands will be used to extract sees characteristics such as their secondary structure or contact number.
+Calculation of the secondary structure requires downloading all full-lenth structures and might take a long time.
+```
+bash ./scripts/extract_ss_pfam.sh #This extracts the secondary structure from AlphaFold full length structures and writes the output in a fasta file.
+python calc_ss_perc_and_trans_ratio.py #This calculates the percantage of each secondary structure state (h/e/c) in the structure and also the length normalized number of transitions
+python calc_avg_contact_numbers.py #This calculates the contact number for the cif files
 ```
 
 
