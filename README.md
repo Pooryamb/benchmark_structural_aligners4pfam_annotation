@@ -5,11 +5,15 @@ for the structure-based domain annotation task.
 You require the following libraries for this benchmarking:
 * Pandas (version 2.2.2)
 * Polars (version 1.0.0)
+* p2rank (version 2.5.1-dev.3)
+
 
 
 To start, make sure that both reseek, foldseek, and mmseqs have been added to 
-your $PATH variable. 
-
+your $PATH variable. Add the rest of the paths accordingly:
+```
+PRANK_PATH="/home/pooryamb/p2rank/distro/prank"
+```
 
 The tar file of Pfam structures has to be in data/raw/pfam_cifs.tar file. 
 All the databases will be stored in the data/raw/dbs directory.
@@ -28,11 +32,12 @@ Cluster the Pfam database and select the cluster rep with the highest average pl
 
 ```
 foldseek convert2fasta ./data/raw/dbs/pfam_cif_cut/pfam ./data/raw/dbs/pfam_cif_cut/pfam.fasta
+foldseek convert2fasta ./data/raw/dbs/pfam_cif_cut/pfam_ss ./data/raw/dbs/pfam_cif_cut/pfam_ss.fasta
 mkdir -p tmp/fstmp/ tmp/alidb tmp/alis/sample_pf tmp/alis/pf_pf tmp/alis/pfam_clust tmp/logs/misc/
 mmseqs easy-cluster ./data/raw/dbs/pfam_cif_cut/pfam.fasta tmp/alis/pfam_clust/pfam_clust tmp/fstmp/clust --min-seq-id 0.4 -c 0.8 --cov-mode 0 -s 9
 mkdir -p ./data/processed/
 python scripts/extract_plddt.py --input ./data/raw/pfam_cifs.tar --output ./data/processed/pfam_plddt.json # Extracts plddt from structures
-python scripts/calc_plddt_average_from_json.py # It converts the json of plddts to a tsv file containing the average plddts
+python scripts/calc_avg_plddt_from_json.py # It converts the json of plddts to a tsv file containing the average plddts
 python ./scripts/select_clusterrep_by_plddt_and_size.py #It selects the one with highest pLDDT as cluster representative. It also removes domains that are shorter than 10 amino acids
 # First, we select the representatives from cif_cut database
 make -f ./scripts/Makefile.make_subdb REP_INFO="./data/processed/pfam_clust_reps.tsv" SRC_DB="./data/raw/dbs/pfam_cif_cut/pfam" OUT_DB="./data/raw/dbs/pfam_cif_cut_clust/pfam"
@@ -175,16 +180,32 @@ rm -rf tmp/alis/sample_pf_sorted/
 ```
 
 ## Seed characteristics
-In this part, characteristics of seeds such as their secondary structure composition, the length normalized number of transitions in secondary structure
-state, and the contact numbers are derived. Later, these will be used for the comparison of performances of the tools.
-Extraction of secondary structure of the seeds requires downloading the cif files of the domain instances from the AlphaFoldDB which is time consuming.
-```
-./scripts/extract_ss_pfam.sh  #Extracts the secondary structure of the full length proteins of seeds.
+The following commands will be used to extract sees characteristics such as their secondary structure or contact number.
+Calculation of the secondary structure requires downloading all full-lenth structures and might take a long time.
+For the calculation of average sequence identity of each seed with other seeds of the same family, copy Pfam-A.seed.gz file (from Pfam website)
+inside the ./data/raw directory
 
 ```
+bash ./scripts/extract_ss_pfam.sh                  # This extracts the secondary structure from AlphaFold full length structures and writes the output in a fasta file.
+python ./scripts/calc_ss_perc_and_trans_ratio.py   # This calculates the percantage of each secondary structure state (h/e/c) in the structure and also the length normalized number of transitions
+python ./scripts/calc_avg_contact_numbers.py       # This calculates the contact number for the cif files
+python ./scripts/extract_pfam_clust_alignments.py  # This will extract the pfam seeds alignments from the Pfam files
+python ./scripts/find_avg_intrafam_pident.py       # This finds the average sequence identity of each seed with other members of its family
+mkdir -p tmp/cifs                                  # This is for the scripts that require the cif files for feature extraction.
+tar -xf ./data/pfam_cifs.tar -C ./tmp/cifs
+python scripts/remove_non_clust_cifs.py            # This removes seeds that have not been selected as cluster representatives
+find ./tmp/cifs/ -iname "*" -type f | parallel gunzip
+python scripts/create_ds_file4prank.py             # Makes a file needed for running p2rank
+mkdir -p ./tmp/prank_preds ./tmp/logs/prank/
+mv ./tmp/extra/filepaths4prank.txt .; $PRANK_PATH predict -c alphafold filepaths4prank.txt -threads 20 -o ./tmp/prank_preds > ./tmp/logs/prank/prank_log.txt 2> ./tmp/logs/prank/prank_err.txt; mv ./filepaths4prank.txt tmp/extra/
+mkdir -p ./tmp/residue_features/
+python scripts/store_pocket_coordinates_json.py    # For each seed, writes the positions of highly confident pocket amino acids
+python scripts/find_conserved_residues.py          # For each seed, writes the location of conserved residues
+### python scripts/make_all_residues_json.py           # Creates a dumb json containing all locations of residues of seeds (we don't need it anymore)
+```
 
 
-## Sensitivity up to the first FP
+## Preprocessing for sensitivity up to the first FP
 
 Now, we find sensitivity by finding the number of TPs before the first FP.
 We want to find labels both at family and clan level. So, we need to 
@@ -198,7 +219,12 @@ gunzip ./data/raw/Pfam-A.clans.tsv.gz
 python scripts/process_pf_clans_info.py # This will make a tsv file whose first column is Pfam id and second column is clan id
 ```
 
-The next scripts will be used for finding the sensitivity based on the number of FPs before the first TP.
+The next script preprocesses the files for finding the sensitivity based on the number of FPs before the first TP.
+It finds the row number of the first occurence of each family/clan level label. The labels could be one of the followings:
+** family: TP, clan: TP
+** family: FP, clan: TP
+** family: FP, clan: FP
+Next, the jupyter notebook script uses the output of this step for the plots
 Run time on Niagara Node of Compute Canada: 1 hour. 
 ```
 mkdir -p data/processed/first_label_occ
@@ -207,17 +233,9 @@ file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "*.tsv")
 echo "$file_paths" | parallel "python scripts/find_nonred_labels.py --input {}"
 ```
 
-## Seed characteristics
-The following commands will be used to extract sees characteristics such as their secondary structure or contact number.
-Calculation of the secondary structure requires downloading all full-lenth structures and might take a long time.
-```
-bash ./scripts/extract_ss_pfam.sh #This extracts the secondary structure from AlphaFold full length structures and writes the output in a fasta file.
-python calc_ss_perc_and_trans_ratio.py #This calculates the percantage of each secondary structure state (h/e/c) in the structure and also the length normalized number of transitions
-python calc_avg_contact_numbers.py #This calculates the contact number for the cif files
-```
 
 
-## CVE plot
+## Preprocessing for CVE plot
 For CVE plot, we plot sensitivity vs error for different e-value thresholds. To select e-value threshold,
 we first find the number of rows with each e-value threshold. The following snippet can do this task:
 ```
@@ -228,6 +246,8 @@ echo "$file_paths" | parallel "python scripts/find_evalue_stratified_labels.py -
 ```
 
 
+
+## Pfam_fl
 
 ```
 # The next lines will make the clustered version of pfam_fl, which I skip for now
@@ -255,11 +275,13 @@ reseek -search ./data/raw/dbs/pfam_fl_sample1/pfam_fl.bca -db ./data/raw/dbs/pfa
 
 ## Investigating exhaustive pairwise alignments between members of a domain
 ```
-python ./scripts/group_pfamclust_by_family.py #This will make a directory for each family in "data/raw/dbs/pfam_fs_cut_clust/grp_by_family" directory 
+foldseek lndb ./data/raw/dbs/pfam_cif_cut/pfam_h ./data/raw/dbs/pfam_cif_cut/pfam_ss_h
+foldseek convert2fasta ./data/raw/dbs/pfam_cif_cut_clust/pfam_ss ./data/raw/dbs/pfam_cif_cut_clust/pfam_ss.fasta
+python ./scripts/group_pfamclust_by_family.py  #This will make a directory for each family in "data/raw/dbs/pfam_cif_cut_clust/grp_by_family" directory
 # inside each directory, tsv files of the database will be stored
 mkdir -p tmp/logs/makedb/fam_dbs/rs tmp/logs/makedb/fam_dbs/fs
 
-ls data/raw/dbs/pfam_fs_cut_clust/grp_by_family/PF*/PF*_ca.tsv | xargs -P 20 -I {} sh -c '
+ls data/raw/dbs/pfam_cif_cut_clust/grp_by_family/PF*/PF*_ca.tsv | xargs -P 20 -I {} sh -c '
     name_wo_ext=$(basename {} _ca.tsv);
     path_wo_ext=${1%_ca.tsv};
     ./scripts/convert_tsv2fsdb.sh $path_wo_ext tmp/logs/makedb/fam_dbs/fs/${name_wo_ext};
@@ -284,7 +306,7 @@ rm -rf tmp/fstmp/fam_alis/rs #reseek doesn't need a tmp directory
 
 # Now, we search each family against itself.
 
-all_pfs=$(find data/raw/dbs/pfam_fs_cut_clust/grp_by_family/ -type f -name '*_ca')  
+all_pfs=$(find data/raw/dbs/pfam_cif_cut_clust/grp_by_family/ -type f -name '*_ca')
 for pf_path in ${all_pfs}  
 do  
     pf_basename=${pf_path%"_ca"}  
@@ -331,4 +353,19 @@ do
         esac  
     done  
 done
+```
+
+## Investigating residue level alignment
+Here, we aim to see how well residue mapping in the pairwise alignment of members of a family aligns with the curated alignments of Pfam.
+In this regard, first, we run a code to identify the number of similar mappings between our pairwise aligners (MMseqs, Foldseek, or Reseek)
+with Pfam MSAs. Besides investigating the overall alignment, we also check the mapping for specific residues, such as those located inside pockets or the
+conserved residues.
+```
+for res_type in all pocket conserved; do
+    for tool in fs fs3di tm mm rs; do
+        mkdir -p ./tmp/intrafam_residue_alignment_counts/${tool}/${res_type}
+    done
+done
+
+python ./scripts/calc_aligned_residues_count.py     # Calculates the residue alignment counts for each tool, took 20 mins on a 20 core machine
 ```

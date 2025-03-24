@@ -13,5 +13,5 @@ with open(input_path) as input_file:
             exec("a = " + parts[1].strip())
             avg_plddt = round(sum(a)/len(a), 2)
             plddt_list.append([seq_id, avg_plddt])
-plddt_df = pd.DataFrame(plddt_list)
-plddt_df.to_csv(output_path, sep="\t", header=None, index=None)
+plddt_df = pd.DataFrame(plddt_list, columns=["seed_id", "avg_plddt"])
+plddt_df.to_csv(output_path, sep="\t", index=None)

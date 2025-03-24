@@ -5,3 +5,4 @@ cat ./tmp/extra/urls.txt | gsutil -m -q cp -I ./tmp/pfam_fl 2> ./tmp/logs/misc/p
 python ./scripts/extract_ss_from_cif.py
 find ./tmp/pfam_fl -iname "*" | parallel rm 
 rm -rf ./tmp/pfam_fl
+python ./scripts/calc_ss_perc_and_trans_ratio.py

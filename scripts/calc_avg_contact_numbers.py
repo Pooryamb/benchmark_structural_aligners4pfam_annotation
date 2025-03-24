@@ -50,5 +50,6 @@ with ProcessPoolExecutor() as executor:
 in_dict_fmt = {x:y.mean() for x,y in in_dict_fmt.items()}
 
 with open("data/processed/avg_contact_num.tsv", "w") as ofile:
+    ofile.write("seed_id\tavg_contact_num\n")
     for key, value in in_dict_fmt.items():
         ofile.write(f"{key}\t{value}\n")
