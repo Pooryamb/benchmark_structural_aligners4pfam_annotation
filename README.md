@@ -204,6 +204,26 @@ python scripts/find_conserved_residues.py          # For each seed, writes the l
 ### python scripts/make_all_residues_json.py           # Creates a dumb json containing all locations of residues of seeds (we don't need it anymore)
 ```
 
+To download the information about binding sites and active sites, the information has to be manually downloaded from UniProt website.
+Although it is possible to use its api, due to the low number of batches and possibility of having a non-responsive response from UniProt,
+it is better to download the data manually. In this regard, first, the UniProt accession of the seeds is written into multiple batches with
+less than 100_000 entries in each, because UniProt website cannot handle more than 100_000 entries at a time.
+First, use the following script to break the accessions into 3 files:
+```
+python scripts/write_unipids_in_batches2download_from_uniprot.py
+```
+Then, upload the ./tmp/extra/unip_ids_b*.txt files to https://www.uniprot.org/id-mapping website. Make sure that
+the mapping is done from UniProtKB to UniProtKB. Customize the columns to show "Active site", "Binding site" , and "Sequence".
+Then, download the tsv file for each batch, and each as unip_sites_b{i}.tsv.gz and copy them inside the ./data/raw directory.
+Find the conserved residues in each sequence using the following commands:
+```
+gunzip ./data/raw/unip_sites_b*.tsv.gz
+python ./scripts/parse_sites_from_unip.py      # Extracts the binding and active sites from UniProt tables and stores them in the json format for the ease of access
+python ./scripts/map_sites_on_seeds.py         # Maps the active and binding sites to the seeds. This script simply corrects the offset effect. It does not expand positions from a seed to other family members
+python ./scripts/expand_sites_to_all_family_members.py  # Only some seeds had residue annotation, this script will expand residue annotations to all other members of the family
+
+```
+
 
 ## Preprocessing for sensitivity up to the first FP
 
@@ -361,11 +381,91 @@ In this regard, first, we run a code to identify the number of similar mappings 
 with Pfam MSAs. Besides investigating the overall alignment, we also check the mapping for specific residues, such as those located inside pockets or the
 conserved residues.
 ```
-for res_type in all pocket conserved; do
+for res_type in all pocket conserved active_site binding_site; do
     for tool in fs fs3di tm mm rs; do
         mkdir -p ./tmp/intrafam_residue_alignment_counts/${tool}/${res_type}
     done
 done
 
-python ./scripts/calc_aligned_residues_count.py     # Calculates the residue alignment counts for each tool, took 20 mins on a 20 core machine
+python ./scripts/calc_aligned_residues_count.py      # Calculates the residue alignment counts for each tool, took ~5 mins on a 20 core machine
+mkdir -p ./data/processed/residue_ali_frac_per_seed/
+python ./scripts/calc_residue_alignment_per_seed.py  # Calculates the average fraction of aligned residues when each seed is used as the target
+python
+```
+
+
+## Benchmarking by searching Pfam Split against Pfam Split
+
+In this part, the Pfam database is splitted into two halves and a random sample of the members of the first half will be searched against the
+second half using different tools. This new approach also allows to conduct searches using HMMER.
+
+```
+mkdir -p ./data/raw/dbs/pfam_split_query ./data/raw/dbs/pfam_split_target tmp/logs/makedb/splitted_pfam/
+for i in {1..16}; do     mkdir -p ./data/raw/dbs/pfam_split_query/B${i}; done  # Query is split up into 16 batches to speed up the searches
+python ./scripts/split_pfam_clust_into_tsvs.py   # Creates the tsv files for making the database
+
+# Convert tsv files into files needed by other tools
+find ./data/raw/dbs/pfam_split_*/ -iname "*_h.tsv" -type f | while read -r file; do
+    wo_postfix=${file/_h.tsv/}
+    base_name=$(basename $(dirname $wo_postfix))
+    python ./scripts/convert_tsv2fasta.py --input_basename ${wo_postfix}
+    bash ./scripts/convert_tsv2fsdb.sh ${wo_postfix} tmp/logs/makedb/splitted_pfam/${base_name}.txt
+    python scripts/convert_tsv2cal.py  --input_basename ${wo_postfix}
+    reseek -convert ${wo_postfix}.cal -bca ${wo_postfix}.bca
+done
+```
+The following code script can be used for searching a split of the database against its other split:
+
+```
+mkdir -p tmp/timestamps/split_pf
+mkdir -p tmp/alis/split_pf
+mkdir -p tmp/alidbs/
+mkdir -p tmp/logs/search/split_pf
+mkdir -p tmp/jobs
+mkdir -p tmp/fstmp/split_pf
+
+dbs_path="./data/raw/dbs/"
+alis_path="tmp/alis/split_pf"
+tmp_path="tmp/fstmp/split_pf"
+
+mkdir -p tmp/alis/split_pf_sorted/
+sh_path=./tmp/jobs/rs_split_ag_split_exh_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "reseek -search ${dbs_path}/pfam_split_query/B${i}/pfam.bca -db ${dbs_path}/pfam_split_target/pfam.bca -output ${alis_path}/reseek_exh_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq -verysensitive -evalue 1e99" >> ${sh_path}
+done
+
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
+#bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
+
+sh_path=./tmp/jobs/fs_split_ag_split_exh_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "foldseek easy-search --exhaustive-search 1 -e inf ${dbs_path}/pfam_split_query//B${i}/pfam ${dbs_path}/pfam_split_target/pfam ${alis_path}/fs_B${i}.tsv ${tmp_path}/pfam_fs_B${i}" >> ${sh_path}
+done
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
+#bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
+
+sh_path=./tmp/jobs/mm_split_ag_split_exh_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "mmseqs easy-search --prefilter-mode 2 -e inf ${dbs_path}/pfam_split_query//B${i}/pfam.fasta ${dbs_path}/pfam_split_target/pfam.fasta ${alis_path}/mm_B${i}.tsv ${tmp_path}/pfam_mm_B${i}" >> ${sh_path}
+done
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
+#bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
+
+sh_path=./tmp/jobs/tm_split_ag_split_exh_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "foldseek easy-search --exhaustive-search 1 -e inf ${dbs_path}/pfam_split_query//B${i}/pfam ${dbs_path}/pfam_split_target/pfam ${alis_path}/tm_B${i}.tsv ${tmp_path}/pfam_tm_B${i} --alignment-type 1 --tmscore-threshold 0.0 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore" >> ${sh_path}
+done
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "12:00:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
+#bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
+
+#To run on a single machine:
+#bash $sh_path
+#To run on a machine operated by JOB scheduler:
+#python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00" --search_category split_pf; sbatch ./tmp/${sh_path/.sh/_slurm_job.sh}
+#
+
 ```
