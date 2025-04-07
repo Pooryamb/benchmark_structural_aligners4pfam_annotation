@@ -8,5 +8,5 @@ def map_poses_from_aligned_seqs2entries(seq_dict, gap_char="."):
         for sto_pointer in range(len(seed_seq)):
             if seed_seq[sto_pointer].upper() != gap_char:
                 seed_pointer += 1
-                mapping[seed_id][sto_pointer+1] = seed_pointer
+                mapping[seed_id][sto_pointer+1] = seed_pointer  # indices start from 1
     return mapping
