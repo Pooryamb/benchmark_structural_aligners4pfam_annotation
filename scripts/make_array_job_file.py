@@ -8,7 +8,7 @@ the command and generates a job file that can be submitted to a machine whose jo
 
 parser.add_argument("--input_sh_path", type=str, required=True, help="Path to the .sh file. Each line should be a separate command")
 parser.add_argument("--time", type=str, required=True, help="The time needed for the job to run. It must be in HH:MM:SS format")
-parser.add_argument("--search_category", type=str, required=False, default="sample_pf" help="The time needed for the job to run. It must be in HH:MM:SS format")
+parser.add_argument("--search_category", type=str, required=False, default="sample_pf", help="The time needed for the job to run. It must be in HH:MM:SS format")
 
 args = parser.parse_args()
 

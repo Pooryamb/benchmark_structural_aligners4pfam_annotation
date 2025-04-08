@@ -417,6 +417,7 @@ done
 The following code script can be used for searching a split of the database against its other split:
 
 ```
+CHUNK_NUM=16
 mkdir -p tmp/timestamps/split_pf
 mkdir -p tmp/alis/split_pf
 mkdir -p tmp/alidbs/
