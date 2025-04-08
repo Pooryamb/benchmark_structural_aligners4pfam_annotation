@@ -390,7 +390,9 @@ done
 python ./scripts/calc_aligned_residues_count.py      # Calculates the residue alignment counts for each tool, took ~5 mins on a 20 core machine
 mkdir -p ./data/processed/residue_ali_frac_per_seed/
 python ./scripts/calc_residue_alignment_per_seed.py  # Calculates the average fraction of aligned residues when each seed is used as the target
-python
+hmmbuild -o ./tmp/logs/makedb/splitted_pfam/pfam_hmm.txt ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_target/pfam.sto
+hmmpress ./data/raw/dbs/pfam_split_target/pfam.hmm
+
 ```
 
 
@@ -413,6 +415,9 @@ find ./data/raw/dbs/pfam_split_*/ -iname "*_h.tsv" -type f | while read -r file;
     python scripts/convert_tsv2cal.py  --input_basename ${wo_postfix}
     reseek -convert ${wo_postfix}.cal -bca ${wo_postfix}.bca
 done
+
+python scripts/make_target_split_pf_sto.py  #This will make the stockholm file of the target database
+
 ```
 The following code script can be used for searching a split of the database against its other split:
 
@@ -533,10 +538,34 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "12:00:0
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
 
 
+################################################################
+######################hmmscan_exh###############################
+
+
+search_params=_exh
+sh_path=./tmp/jobs/hmm_split_ag_split${search_params}_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "hmmscan --tblout ${alis_path}/pfam_hmmscan${search_params}_B${i}.tsv -o ${alis_path}/pfam_hmmscan${search_params}_large_file_B${i}.tsv --max ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_query/B${i}/pfam.fasta" >> ${sh_path}
+done
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
+
+
+################################################################
+######################hmmscan_pref##############################
+
+search_params=_e3
+sh_path=./tmp/jobs/hmm_split_ag_split${search_params}_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "hmmscan --tblout ${alis_path}/pfam_hmmscan${search_params}_B${i}.tsv -o ${alis_path}/pfam_hmmscan${search_params}_large_file_B${i}.tsv ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_query/B${i}/pfam.fasta" >> ${sh_path}
+done
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
+
+
 #To run on a single machine:
 #bash $sh_path
 #To run on a machine operated by JOB scheduler:
 #python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00" --search_category split_pf; sbatch ./tmp/${sh_path/.sh/_slurm_job.sh}
 #
-
 ```
