@@ -546,7 +546,7 @@ search_params=_exh
 sh_path=./tmp/jobs/hmm_split_ag_split${search_params}_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "hmmscan --tblout ${alis_path}/pfam_hmmscan${search_params}_B${i}.tsv -o ${alis_path}/pfam_hmmscan${search_params}_large_file_B${i}.tsv --max ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_query/B${i}/pfam.fasta" >> ${sh_path}
+    echo "hmmscan --tblout ${alis_path}/hmmscan${search_params}_B${i}.tsv -o ${alis_path}/hmmscan${search_params}_large_file_B${i}.tsv --max ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_query/B${i}/pfam.fasta" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
 
@@ -558,7 +558,7 @@ search_params=_e3
 sh_path=./tmp/jobs/hmm_split_ag_split${search_params}_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "hmmscan --tblout ${alis_path}/pfam_hmmscan${search_params}_B${i}.tsv -o ${alis_path}/pfam_hmmscan${search_params}_large_file_B${i}.tsv ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_query/B${i}/pfam.fasta" >> ${sh_path}
+    echo "hmmscan --tblout ${alis_path}/hmmscan${search_params}_B${i}.tsv -o ${alis_path}/hmmscan${search_params}_large_file_B${i}.tsv ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_query/B${i}/pfam.fasta" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
 
