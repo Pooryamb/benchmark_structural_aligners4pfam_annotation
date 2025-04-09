@@ -569,3 +569,28 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00
 #python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00" --search_category split_pf; sbatch ./tmp/${sh_path/.sh/_slurm_job.sh}
 #
 ```
+### Sort Reseek output
+
+It takes ~ 1.5 hours on a system with 80 threads.
+
+```
+mkdir -p tmp/alis/split_pf_sorted/
+files=$(ls tmp/alis/split_pf/reseek_*.tsv)
+
+for file in $files; do
+    file_base_name=$(basename $file)
+    sort --parallel=80 --buffer-size=50% -t$'\t' -k1,1 -k10,10g $file -o tmp/alis/split_pf_sorted/${file_base_name}
+done
+
+rm -f tmp/alis/split_pf/reseek_*.tsv
+mv tmp/alis/split_pf_sorted/reseek*.tsv tmp/alis/split_pf/
+rm -rf tmp/alis/split_pf_sorted/
+```
+
+
+
+Next, the first hit for each tool is identified. 
+```
+mkdir -p ./tmp/first_hit
+
+```
