@@ -33,7 +33,7 @@ for grp_name, grp_df in seeds.groupby("family"):
     first_half_row_num = grp_df.shape[0] // 2
     second_half_row_num = grp_df.shape[0] - first_half_row_num
     seeds_first_half.append(grp_df.head(first_half_row_num))
-    seeds_second_half.append(grp_df.head(second_half_row_num))
+    seeds_second_half.append(grp_df.tail(second_half_row_num))
 
 seeds_first_half = pd.concat(seeds_first_half).reset_index(drop=True)
 seeds_query_df = seeds_first_half.sample(n=qdb_size, random_state=42)

@@ -591,6 +591,6 @@ rm -rf tmp/alis/split_pf_sorted/
 
 Next, the first hit for each tool is identified. 
 ```
-mkdir -p ./tmp/first_hit
+mkdir -p ./tmp/first_hits
 
 ```
