@@ -11,7 +11,8 @@ for family_id, fam_df in target_pfam_members.groupby("family"):
     family_dict = {}
     for index, row in fam_df.iterrows():
         seed_id = row["seed_id"]
-        family_dict[seed_id] = parsed_sto[family_id][seed_id]
+        if seed_id in parsed_sto[family_id]:
+            family_dict[seed_id] = parsed_sto[family_id][seed_id]
     target_db_dict[family_id] = family_dict
 
 def rm_gaps_from_sto(parsed_sto):

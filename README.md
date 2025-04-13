@@ -390,8 +390,7 @@ done
 python ./scripts/calc_aligned_residues_count.py      # Calculates the residue alignment counts for each tool, took ~5 mins on a 20 core machine
 mkdir -p ./data/processed/residue_ali_frac_per_seed/
 python ./scripts/calc_residue_alignment_per_seed.py  # Calculates the average fraction of aligned residues when each seed is used as the target
-hmmbuild -o ./tmp/logs/makedb/splitted_pfam/pfam_hmm.txt ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_target/pfam.sto
-hmmpress ./data/raw/dbs/pfam_split_target/pfam.hmm
+
 
 ```
 
@@ -417,6 +416,8 @@ find ./data/raw/dbs/pfam_split_*/ -iname "*_h.tsv" -type f | while read -r file;
 done
 
 python scripts/make_target_split_pf_sto.py  #This will make the stockholm file of the target database
+hmmbuild -o ./tmp/logs/makedb/splitted_pfam/pfam_hmm.txt ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_target/pfam.sto
+hmmpress ./data/raw/dbs/pfam_split_target/pfam.hmm
 
 ```
 The following code script can be used for searching a split of the database against its other split:
@@ -592,5 +593,5 @@ rm -rf tmp/alis/split_pf_sorted/
 Next, the first hit for each tool is identified. 
 ```
 mkdir -p ./tmp/first_hits
-
+python ./scripts/select_top_hits.py
 ```
