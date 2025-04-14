@@ -529,11 +529,11 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:0
 
 ################################################################
 ######################TM-align##################################
-
+search_params=_exh
 sh_path=./tmp/jobs/tm_split_ag_split_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "foldseek easy-search --exhaustive-search 1 -e inf ${dbs_path}/pfam_split_query//B${i}/pfam ${dbs_path}/pfam_split_target/pfam ${alis_path}/tm_B${i}.tsv ${tmp_path}/pfam_tm_B${i} --alignment-type 1 --tmscore-threshold 0.0 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore" >> ${sh_path}
+    echo "foldseek easy-search --exhaustive-search 1 -e inf ${dbs_path}/pfam_split_query//B${i}/pfam ${dbs_path}/pfam_split_target/pfam ${alis_path}/tm${search_params}_B${i}.tsv ${tmp_path}/pfam_tm_B${i} --alignment-type 1 --tmscore-threshold 0.0 --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,alntmscore,qtmscore,ttmscore" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "12:00:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
