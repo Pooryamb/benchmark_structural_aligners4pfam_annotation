@@ -31,6 +31,6 @@ def rm_gaps_from_sto(parsed_sto):
         edited_sto[fam] = {seed_id: "".join(seq_aas[seed_id]) for seed_id in fam_dict.keys()}
     return edited_sto
 
-# Remove columns that are only gaps
-gap_less_sto = rm_gaps_from_sto(target_db_dict)
-write_parsed_sto(gap_less_sto, acc_mapping, f"{base_dir}/data/raw/dbs/pfam_split_target/pfam.sto")
+
+###target_db_dict = rm_gaps_from_sto(target_db_dict) ##Remove columns that are only gaps. This is not needed because it will change the msa column names
+write_parsed_sto(target_db_dict, acc_mapping, f"{base_dir}/data/raw/dbs/pfam_split_target/pfam.sto")

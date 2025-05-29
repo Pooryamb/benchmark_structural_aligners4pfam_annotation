@@ -6,51 +6,68 @@ import itertools
 import pandas as pd
 
 from headers import fam_ali_headers
-from find_pw_correspondence import find_pw_correspondence # Taking two sequences as input and the start of alignment on each sequnce(optional), it gives the mapping
+from find_pw_correspondence import find_pw_correspondence
 from parse_stockholm import parse_stockholm
 
-# load the pfam alignments as a dictionary
-base_dir = "./"
-pfam_dict, _ = parse_stockholm(open(f"{base_dir}/data/processed/aligned_pfam_clust.sto").read())
-def unify_ali_dict(seq_dict):
-    unified = {x:y.upper().replace(".", "-") for x,y in seq_dict.items()}
-    return unified
-pfam_dict = {x:unify_ali_dict(y) for x,y in pfam_dict.items()}
+# Load the pfam alignments as a dictionary
+def load_pfam_data(base_dir):
+    pfam_dict, _ = parse_stockholm(open(f"{base_dir}/data/processed/aligned_pfam_clust.sto").read())
+    return {x: {k: v.upper().replace(".", "-") for k, v in y.items()} for x, y in pfam_dict.items()}
 
-# load special residues of the seeds, such as pockets, conserved, etc.
-special_residues_files = glob.glob(f"{base_dir}/tmp/residue_features/*.json") # It is assumed that the special residues whose alignment is of our interest is accessible in this directory
-special_residues = {os.path.basename(x).replace(".json", ""): json.loads(open(x).read()) for x in special_residues_files}
+# Load special residues of the seeds, such as pockets, conserved, etc.
+def load_special_residues(base_dir):
+    special_residues_files = glob.glob(f"{base_dir}/tmp/residue_features/*.json")
+    return {os.path.basename(x).replace(".json", ""): json.loads(open(x).read()) for x in special_residues_files}
 
-tools = ["fs", "fs3di", "rs", "tm", "mm"]
-header_line = "query\ttarget\tcorrect\tall\n"
-def check_residue_alignment(family, tool):
-    """Takes the pfam family as input, and compares the residue level alignment for all members of the family with the pfam curated MSAs. It outputs multiple files, one for the overall
-    residue alignment, others for residue alignment of special residues, such as conserved residues or residues located inside the pockets"""
+# Main residue alignment checking function
+def check_residue_alignment(args):
+    family, tool, pfam_dict, special_residues = args
+
+    """Compares the residue-level alignment for all members of the family with the pfam curated MSAs."""
     gs_msa = pfam_dict[family]
-#    for tool in tools:
+
     pwa = pd.read_csv(f"{base_dir}/tmp/alis/fam_alis/{tool}/{family}.tsv", sep="\t", header=None, names=fam_ali_headers[tool])
-    pwa = pwa[pwa["query"]!=pwa["target"]]
-    all_file = open(f"{base_dir}/tmp/intrafam_residue_alignment_counts/{tool}/all/{family}.tsv", 'w')
-    special_files = {kind:open(f"{base_dir}/tmp/intrafam_residue_alignment_counts/{tool}/{kind}/{family}.tsv", 'w') for kind in special_residues.keys() }
-    all_file.write(header_line)                                     # write header for the report of all residues
-    _ = [f.write(header_line) for f in special_files.values()] # write header for the report of special residues
+    pwa = pwa[pwa["query"] != pwa["target"]]
 
-    for index, row in pwa.iterrows():
-        pwa_mapping = find_pw_correspondence(row["qaln"], row["taln"], row["qstart"], row["tstart"])  # finds mapping between query and target for the selected tool
-        gs_mapping = find_pw_correspondence(gs_msa[row["query"]], gs_msa[row["target"]])              # finds mapping between query and target based on Pfam MSAs
-        correctly_mapped = set(pwa_mapping).intersection(set(gs_mapping))                             # finds the number of correctly mapped residues
-        query, target = row["query"], row["target"]
-        all_file.write(f"{query}\t{target}\t{len(correctly_mapped)}\t{len(gs_mapping)}\n")
-        for kind, file in special_files.items():
-            target_special_residues = special_residues[kind].get(target, [])
-            special_coorectly_aligned = [x for x in correctly_mapped if x[1] in target_special_residues]
-            file.write(f"{query}\t{target}\t{len(special_coorectly_aligned)}\t{len(target_special_residues)}\n")
+    header_line = "query\ttarget\tcorrect\tall\n"
+    all_file_path = f"{base_dir}/tmp/intrafam_residue_alignment_counts/{tool}/all/{family}.tsv"
+    special_files_paths = {kind: f"{base_dir}/tmp/intrafam_residue_alignment_counts/{tool}/{kind}/{family}.tsv" for kind in special_residues.keys()}
 
-    all_file.close()
-    for file in special_files.values():
-        file.close()
+    # Write to files
+    with open(all_file_path, 'w') as all_file:
+        all_file.write(header_line)
 
-with ProcessPoolExecutor() as executor:
-    # Parallelize the dictionary comprehension
-    all_fam_tool_combinations = itertools.product(pfam_dict.keys(), tools)
-    executor.map(check_residue_alignment, list(all_fam_tool_combinations))
+        special_file_handlers = {kind: open(file_path, 'w') for kind, file_path in special_files_paths.items()}
+        for f in special_file_handlers.values():
+            f.write(header_line)  # write header for special residues
+
+        for index, row in pwa.iterrows():
+            pwa_mapping = find_pw_correspondence(row["qaln"], row["taln"], row["qstart"], row["tstart"])
+            gs_mapping = find_pw_correspondence(gs_msa[row["query"]], gs_msa[row["target"]])
+            correctly_mapped = set(pwa_mapping).intersection(set(gs_mapping))
+            query, target = row["query"], row["target"]
+            all_file.write(f"{query}\t{target}\t{len(correctly_mapped)}\t{len(gs_mapping)}\n")
+            for kind, file in special_file_handlers.items():
+                seed_special_residues = special_residues[kind].get(query, [])
+                special_correctly_aligned = [x for x in correctly_mapped if x[0] in seed_special_residues]
+                file.write(f"{query}\t{target}\t{len(special_correctly_aligned)}\t{len(seed_special_residues)}\n")
+
+        for f in special_file_handlers.values():
+            f.close()
+
+# Execution block
+if __name__ == "__main__":
+    base_dir = "./"
+
+    pfam_dict = load_pfam_data(base_dir)
+    special_residues = load_special_residues(base_dir)
+
+    tools = ["fs", "fs3di", "rs", "tm", "mm"]
+
+    all_fam_tool_combinations = sorted(list(itertools.product(pfam_dict.keys(), tools)))
+
+    # Create arguments list to pass to the executor
+    args = [(family, tool, pfam_dict, special_residues) for family, tool in all_fam_tool_combinations]
+
+    with ProcessPoolExecutor() as executor:
+        executor.map(check_residue_alignment, args)

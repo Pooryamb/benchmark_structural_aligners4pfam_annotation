@@ -387,9 +387,9 @@ for res_type in all pocket conserved active_site binding_site; do
     done
 done
 
-python ./scripts/calc_aligned_residues_count.py      # Calculates the residue alignment counts for each tool, took ~5 mins on a 20 core machine
+python ./scripts/calc_aligned_residues_count.py      # Calculates the residue alignment counts for each tool, took ~9 hours on a 20 core machine
 mkdir -p ./data/processed/residue_ali_frac_per_seed/
-python ./scripts/calc_residue_alignment_per_seed.py  # Calculates the average fraction of aligned residues when each seed is used as the target
+python ./scripts/calc_residue_alignment_per_seed.py  # Calculates the average fraction of aligned residues when each seed is used as the query
 
 
 ```
@@ -540,26 +540,26 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "12:00:0
 
 
 ################################################################
-######################hmmscan_exh###############################
+######################hmmscan_exh############################### #This might be deleted
 
-
+CPU_NUM=80
 search_params=_exh
 sh_path=./tmp/jobs/hmm_split_ag_split${search_params}_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "hmmscan --tblout ${alis_path}/hmmscan${search_params}_B${i}.tsv -o ${alis_path}/hmmscan${search_params}_large_file_B${i}.tsv --max ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_query/B${i}/pfam.fasta" >> ${sh_path}
+    echo "hmmscan --cpu ${CPU_NUM} --tblout ${alis_path}/hmmscan${search_params}_B${i}.tsv -o ${alis_path}/hmmscan${search_params}_large_file_B${i}.tsv --max ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_query/B${i}/pfam.fasta" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
 
 
 ################################################################
 ######################hmmscan_pref##############################
-
+CPU_NUM=20
 search_params=_e3
 sh_path=./tmp/jobs/hmm_split_ag_split${search_params}_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "hmmscan --tblout ${alis_path}/hmmscan${search_params}_B${i}.tsv -o ${alis_path}/hmmscan${search_params}_large_file_B${i}.tsv ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_query/B${i}/pfam.fasta" >> ${sh_path}
+    echo "hmmscan --cpu ${CPU_NUM} --tblout ${alis_path}/hmmscan${search_params}_B${i}.tsv -o ${alis_path}/hmmscan${search_params}_large_file_B${i}.tsv ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_query/B${i}/pfam.fasta" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
 
@@ -577,10 +577,11 @@ It takes ~ 1.5 hours on a system with 80 threads.
 ```
 mkdir -p tmp/alis/split_pf_sorted/
 files=$(ls tmp/alis/split_pf/reseek_*.tsv)
+CPU_NUM=80
 
 for file in $files; do
     file_base_name=$(basename $file)
-    sort --parallel=80 --buffer-size=50% -t$'\t' -k1,1 -k10,10g $file -o tmp/alis/split_pf_sorted/${file_base_name}
+    sort --parallel=${CPU_NUM} --buffer-size=50% -t$'\t' -k1,1 -k10,10g $file -o tmp/alis/split_pf_sorted/${file_base_name}
 done
 
 rm -f tmp/alis/split_pf/reseek_*.tsv
@@ -594,4 +595,32 @@ Next, the first hit for each tool is identified.
 ```
 mkdir -p ./tmp/first_hits
 python ./scripts/select_top_hits.py
+```
+
+### Residue level alignment for HMMER
+
+```
+python scripts/split_pfam_query_split.py # Makes a fasta file for members of each family in the query split
+python scripts/split_pfam_target_split.py # Makes a sto file for members of each family in the target split
+mkdir -p ./tmp/logs/makedb/splitted_pfam/hmmer_fam/
+# Hmm files are built from sto files
+parallel 'file={}; fam=$(basename "$file" .sto); hmmbuild -o ./tmp/logs/makedb/splitted_pfam/hmmer_fam/${fam}.txt ./data/raw/dbs/pfam_split_target/grp_by_family/${fam}.hmm "$file"; hmmpress ./data/raw/dbs/pfam_split_target/grp_by_family/${fam}.hmm' ::: ./data/raw/dbs/pfam_split_target/grp_by_family/*.sto
+mkdir -p ./tmp/alis/fam_alis/hmmscan/
+parallel 'fam=$(basename {} .fasta); hmmscan --cpu 1 --max --tblout ./tmp/alis/fam_alis/hmmscan/${fam}.tsv -o ./tmp/alis/fam_alis/hmmscan/${fam}_large_file.txt ./data/raw/dbs/pfam_split_target/grp_by_family/${fam}.hmm data/raw/dbs/pfam_split_query/grp_by_family/${fam}.fasta' ::: ./data/raw/dbs/pfam_split_query/grp_by_family/*.fasta
+
+
+python scripts/find_msa_hmm_mapping.py   # Finds the correspondence between the msa and hmm columns
+python scripts/find_q_hmm_mapping.py     # Finds the residue level alignment between random query sample and the hmm profiles
+python scripts/find_seed_msa_mapping.py  # Finds the mapping between seed coordinates and MSA coordinates
+
+
+For what percentage, the first hit was correct
+Using different thresholds, what percentage becomes correct, what percentage is incorrect
+
+Residue level alignment for
+* all residues
+* conserved residues
+* active sites
+* binding sites
+
 ```

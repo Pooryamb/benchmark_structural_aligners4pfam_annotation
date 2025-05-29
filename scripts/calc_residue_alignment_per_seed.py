@@ -8,7 +8,7 @@ def summarize_family(tsv_path):
     res_ali_df = res_ali_df[res_ali_df["all"]!=0]
     res_ali_df = res_ali_df[res_ali_df["query"]!=res_ali_df["target"]]
     res_ali_df["aligned_fraction"] = res_ali_df["correct"] / res_ali_df["all"]
-    return res_ali_df.groupby("target")["aligned_fraction"].agg("mean").reset_index()
+    return res_ali_df.groupby("query")["aligned_fraction"].agg("mean").reset_index() ### It might need to change to target for the case of target-centric evaluation
 
 
 tools = [os.path.basename(x) for x in glob.glob("./tmp/intrafam_residue_alignment_counts/*")]
