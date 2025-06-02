@@ -391,7 +391,6 @@ python ./scripts/calc_aligned_residues_count.py      # Calculates the residue al
 mkdir -p ./data/processed/residue_ali_frac_per_seed/
 python ./scripts/calc_residue_alignment_per_seed.py  # Calculates the average fraction of aligned residues when each seed is used as the query
 
-
 ```
 
 
@@ -553,7 +552,7 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00
 
 
 ################################################################
-######################hmmscan_pref##############################
+######################hmmscan_e3################################
 CPU_NUM=20
 search_params=_e3
 sh_path=./tmp/jobs/hmm_split_ag_split${search_params}_commands.sh
@@ -611,16 +610,14 @@ parallel 'fam=$(basename {} .fasta); hmmscan --cpu 1 --max --tblout ./tmp/alis/f
 
 python scripts/find_msa_hmm_mapping.py   # Finds the correspondence between the msa and hmm columns
 python scripts/find_q_hmm_mapping.py     # Finds the residue level alignment between random query sample and the hmm profiles
-python scripts/find_seed_msa_mapping.py  # Finds the mapping between seed coordinates and MSA coordinates
+python scripts/find_seed_msa_mapping.py  # Finds the mapping between seed coordinates and curated MSA coordinates
 
+mkdir -p data/processed/residue_ali_frac_per_seed_split_vs_split
+python ./scripts/summarize_residue_alignment4hmmscan.py
+python ./scripts/adjust_pwa_res_ali4split_vs_split.py
 
+# Performance plots can be generated using the scripts/plot_residue_level_alignments-split_vs_split.ipynb notebook
 For what percentage, the first hit was correct
 Using different thresholds, what percentage becomes correct, what percentage is incorrect
-
-Residue level alignment for
-* all residues
-* conserved residues
-* active sites
-* binding sites
 
 ```

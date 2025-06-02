@@ -20,6 +20,7 @@ for hmm_block in read_text_blocks(hmm_path):
     pos_lines = hmm_block[hmm_start_ind+5:-1:3]
     pos_mapping = [[x.split()[0], x.split()[-5]] for x in pos_lines]
     mapping_df = pd.DataFrame(pos_mapping, columns=["hmm_col", "msa_col"])
+    mapping_df = mapping_df[["hmm_col", "msa_col"]].astype(int)
     #mapping_df["pf"] = pfam_acc
     all_mappings[pfam_acc] = mapping_df
     #all_mappings.append(mapping_df)

@@ -12,6 +12,8 @@ data
 |-- processed
 |  |-- evalue_bins
 |  |-- first_label_occ
+|  |-- residue_ali_frac_per_seed
+|  |-- residue_ali_frac_per_seed_split_vs_split
 
 
 tmp

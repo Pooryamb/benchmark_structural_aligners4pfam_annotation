@@ -1,11 +1,20 @@
 import os
+import pandas as pd
+import numpy as np
 from fasta2dict import fasta2dict
 from dict2fasta import dict2fasta
+from parse_stockholm import parse_stockholm
 
 base_dir = "."
-query_fasta = fasta2dict(f"{base_dir}/data/raw/dbs/pfam_split_query/pfam.fasta")
+
+whole_pfam_clust = fasta2dict(f"{base_dir}/data/raw/dbs/pfam_cif_cut_clust/pfam.fasta")
+whole_pfam_clust = {x.replace(".cif", ""):y for x,y in whole_pfam_clust.items()}
+t_db = pd.read_csv(f"{base_dir}/data/raw/dbs/pfam_split_target/pfam_h.tsv", sep="\t", header=None)
+all_q_ids = set(whole_pfam_clust.keys()) - set(t_db[1])
+query_fasta = {x:y for x,y in whole_pfam_clust.items() if x in all_q_ids}
 
 grouped_fasta = {}
+
 for seed_id, seq in query_fasta.items():
     fam = seed_id.split("-")[-1]
     seq_dict = grouped_fasta.get(fam, {})
