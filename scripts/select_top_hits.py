@@ -32,6 +32,6 @@ def select_top_hit(input_path, output_path = ""):
 
 
 if __name__ == "__main__":
-    file_paths = glob.glob("./tmp/alis/split_pf/*.tsv")
+    file_paths = [x for x in glob.glob("./tmp/alis/split_pf/*.tsv") if "_large_file" not in x]
     with ProcessPoolExecutor() as executor:
         executor.map(select_top_hit, file_paths)
