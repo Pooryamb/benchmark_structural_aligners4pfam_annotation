@@ -450,25 +450,25 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
 
 ################################################################
-###################Reseek-e_3-fast##############################
+####################Reseek-10-fast##############################
 
-search_params=_e3_fast
+search_params=_10_fast
 sh_path=./tmp/jobs/rs_split_ag_split${search_params}_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "reseek -search ${dbs_path}/pfam_split_query/B${i}/pfam.bca -db ${dbs_path}/pfam_split_target/pfam.bca -output ${alis_path}/reseek${search_params}_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq -fast -evalue 1e-3" >> ${sh_path}
+    echo "reseek -search ${dbs_path}/pfam_split_query/B${i}/pfam.bca -db ${dbs_path}/pfam_split_target/pfam.bca -output ${alis_path}/reseek${search_params}_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq -fast -evalue 10" >> ${sh_path}
 done
 
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
 
 ################################################################
-###################Reseek-e_3-sens##############################
+####################Reseek-10-sens##############################
 
-search_params=_e3_sens
+search_params=_10_sens
 sh_path=./tmp/jobs/rs_split_ag_split${search_params}_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "reseek -search ${dbs_path}/pfam_split_query/B${i}/pfam.bca -db ${dbs_path}/pfam_split_target/pfam.bca -output ${alis_path}/reseek${search_params}_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq -sensitive -evalue 1e-3" >> ${sh_path}
+    echo "reseek -search ${dbs_path}/pfam_split_query/B${i}/pfam.bca -db ${dbs_path}/pfam_split_target/pfam.bca -output ${alis_path}/reseek${search_params}_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq -sensitive -evalue 10" >> ${sh_path}
 done
 
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
@@ -488,13 +488,13 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:0
 
 
 ################################################################
-###################Foldseek-e3##################################
+###################Foldseek-10##################################
 
-search_params=_e3
+search_params=_10
 sh_path=./tmp/jobs/fs_split_ag_split${search_params}_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "foldseek easy-search -e 1e-3 ${dbs_path}/pfam_split_query//B${i}/pfam ${dbs_path}/pfam_split_target/pfam ${alis_path}/fs${search_params}_B${i}.tsv ${tmp_path}/pfam_fs${search_params}_B${i}" >> ${sh_path}
+    echo "foldseek easy-search -e 10 ${dbs_path}/pfam_split_query//B${i}/pfam ${dbs_path}/pfam_split_target/pfam ${alis_path}/fs${search_params}_B${i}.tsv ${tmp_path}/pfam_fs${search_params}_B${i}" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
@@ -514,13 +514,13 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:0
 
 
 #################################################################
-########################MMseqs-e3################################
+########################MMseqs-10################################
 
-search_params=_e3
+search_params=_10
 sh_path=./tmp/jobs/mm_split_ag_split${search_params}_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "mmseqs easy-search -e 1e-3 ${dbs_path}/pfam_split_query//B${i}/pfam.fasta ${dbs_path}/pfam_split_target/pfam.fasta ${alis_path}/mm${search_params}_B${i}.tsv ${tmp_path}/pfam_mm${search_params}_B${i}" >> ${sh_path}
+    echo "mmseqs easy-search -e 10 ${dbs_path}/pfam_split_query//B${i}/pfam.fasta ${dbs_path}/pfam_split_target/pfam.fasta ${alis_path}/mm${search_params}_B${i}.tsv ${tmp_path}/pfam_mm${search_params}_B${i}" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
@@ -552,9 +552,9 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00
 
 
 ################################################################
-######################hmmscan_e3################################
+######################hmmscan_10################################
 CPU_NUM=20
-search_params=_e3
+search_params=_10
 sh_path=./tmp/jobs/hmm_split_ag_split${search_params}_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
@@ -593,6 +593,9 @@ rm -rf tmp/alis/split_pf_sorted/
 Next, the first hit for each tool is identified. 
 ```
 mkdir -p ./tmp/first_hits
+##### Be cautious! #######
+# At the time of writing this script, Reseek had a bug in its fast mode. It swapped the query and target columns
+# If the issue with Reseek is resolved, the ./scripts/select_top_hits.py script must be adjusted.
 python ./scripts/select_top_hits.py
 ```
 

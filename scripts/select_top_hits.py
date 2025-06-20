@@ -24,9 +24,21 @@ def select_top_hit(input_path, output_path = ""):
     if not(output_path):
         output_path = input_path.replace("alis/split_pf", "first_hits")
     selected_rows = []
+    
+    non_red_col = "query"
+    ######## Remove the following if else condition only if the issue with Reseek is resolved.
+    if "reseek" in input_path and "fast" in input_path:
+        non_red_col = "target"
+
     for chunk in read_alns_in_chunks(input_path):
-        selected_rows.append(chunk.drop_duplicates("query"))
-    first_hits =  pd.concat(selected_rows).drop_duplicates("query")
+        selected_rows.append(chunk.drop_duplicates(non_red_col))
+    first_hits =  pd.concat(selected_rows).drop_duplicates(non_red_col)
+    ######## Remove the following if condition only if the issue with Reseek has been resolved
+    if "reseek" in input_path and "fast" in input_path:
+        first_hits_query = first_hits["target"]
+        first_hits_target = first_hits["query"]
+        first_hits["target"] = first_hits_target
+        first_hits["query"] = first_hits_query
     first_hits.to_csv(output_path, sep="\t", index=None)
 
 
