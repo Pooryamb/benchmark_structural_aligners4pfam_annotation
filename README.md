@@ -466,9 +466,10 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:0
 
 search_params=_10_sens
 sh_path=./tmp/jobs/rs_split_ag_split${search_params}_commands.sh
+db_size=128502  ## Strangely, Reseek used the db_size of 10,000. 
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
-    echo "reseek -search ${dbs_path}/pfam_split_query/B${i}/pfam.bca -db ${dbs_path}/pfam_split_target/pfam.bca -output ${alis_path}/reseek${search_params}_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq -sensitive -evalue 10" >> ${sh_path}
+    echo "reseek -search ${dbs_path}/pfam_split_query/B${i}/pfam.bca -db ${dbs_path}/pfam_split_target/pfam.bca -output ${alis_path}/reseek${search_params}_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq -sensitive -evalue 10 -dbsize ${db_size}" >> ${sh_path}
 done
 
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
