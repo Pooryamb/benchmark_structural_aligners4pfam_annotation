@@ -559,7 +559,7 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00
 
 ################################################################
 ######################hmmscan_pref##############################
-CPU_NUM=20
+CPU_NUM=80
 search_params=_pref
 # Note that the e-value reported by HMMER cannot go above 10 even if a higher number is set.
 sh_path=./tmp/jobs/hmm_split_ag_split${search_params}_commands.sh
