@@ -3,7 +3,9 @@ import os
 import pandas as pd
 import numpy as np
 
-data_dir = "../data/"
+
+script_dir = os.path.dirname(os.path.realpath(__file__))
+data_dir = os.path.join(script_dir, "../data")
 
 def cnt_tps_bef_1st_fp(input_df):
     """Takes a dataframe containing the first occurence of each (pfam_label and clan_label) as input
@@ -52,7 +54,7 @@ def calc_tps_frac_bef_1st_fp(cnt_df, fam_size_df, ignore_self_hits=True):
     return freq_df
 
 
-def cum_sens_dist(tps_frac, target_col):
+def cum_sens_dist(tps_frac, target_col="tp_bef_fp_frac_pfam"):
     """ The inputs are a dataframe containing the fraction of tps before first fp and the column to calculate
     cumulative frequency based on. The input dataframe can be provided by calc_tps_frac_bef_1st_fp function
     """

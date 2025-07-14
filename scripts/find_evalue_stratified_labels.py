@@ -49,7 +49,7 @@ for chunk in label_pf_clan_chunk(args.input, remove_self_matches=False):
     if is_tm:
         chunk["evalue_bin"] = -np.round(100 * chunk['evalue'])
     else:
-        chunk["evalue_bin"] = np.where(chunk['evalue'] == 0, -1000, np.round(np.log10(chunk['evalue'])))
+        chunk["evalue_bin"] = np.where(chunk['evalue'] == 0, -1000, np.round(np.log2(chunk['evalue'])))
     head_id = chunk.iloc[0]["query"]
     if not(buffer_df.empty):
         chunk = pd.concat([buffer_df, chunk])

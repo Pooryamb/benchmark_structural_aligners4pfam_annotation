@@ -241,9 +241,13 @@ python scripts/process_pf_clans_info.py # This will make a tsv file whose first 
 
 The next script preprocesses the files for finding the sensitivity based on the number of FPs before the first TP.
 It finds the row number of the first occurence of each family/clan level label. The labels could be one of the followings:
-** family: TP, clan: TP
-** family: FP, clan: TP
-** family: FP, clan: FP
+
+*** family: TP, clan: TP
+
+*** family: FP, clan: TP
+
+*** family: FP, clan: FP
+
 Next, the jupyter notebook script uses the output of this step for the plots
 Run time on Niagara Node of Compute Canada: 1 hour. 
 ```
@@ -251,8 +255,9 @@ mkdir -p data/processed/first_label_occ
 
 file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "*.tsv")
 echo "$file_paths" | parallel "python scripts/find_nonred_labels.py --input {}"
-```
+python ./scripts/convert_first_occ2sffp_ci.py  # Prepares the whole data for the SFFP plot. It will calculate the AUC for SFFP, CIs for AUC_SFFP, SFFP plot, and CIs for SFFP plot
 
+```
 
 
 ## Preprocessing for CVE plot
@@ -264,7 +269,7 @@ file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "*_B*.tsv")
 echo "$file_paths" | parallel "python scripts/find_evalue_stratified_labels.py --input {}"
 
 ```
-
+Then, run the Jupyter notebook (COV_SFFP_stratified_performance) to visualize the performance plots.
 
 
 ## Pfam_fl

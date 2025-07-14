@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 
-def cve(df):
+def cve(df, q_count=None):
     """Takes a dataframe whose rows show for each query within each e-value evalue_bin
     how many True Positives or False Positives are found. It returns a dataframe
     that for each e-value threshold has the coverage and fpepq.
@@ -14,10 +14,13 @@ def cve(df):
         tp_clan: The number of TPs at Clan level at this bin
         fp_pfam: The number of FPs at Pfam level at this bin
         fp_clan: The number of FPs at Clan level at this bin
+        
+        Besides, as the same function will be used for bootstrapping, the number of queries should be specified, too.
     """
     cnt_cols = ["tp_pfam", "tp_clan", "fp_pfam", "fp_clan"]
-    res_df = df.groupby("evalue_bin")[cnt_cols].agg(sum).reset_index().sort_values(by="evalue_bin")
-    q_count = df["query"].unique().shape[0]
+    res_df = df.groupby("evalue_bin")[cnt_cols].agg("sum").reset_index().sort_values(by="evalue_bin")
+    if q_count is None:
+        q_count = df["query"].unique().shape[0]
     #As FEPEQ is False positives expected per query, we need to divide the number of FPs by the number of queries.
     res_df[["fp_pfam", "fp_clan"]] = res_df[["fp_pfam", "fp_clan"]]/q_count
     res_df["fpepq_pfam"] = res_df["fp_pfam"].cumsum()
