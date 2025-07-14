@@ -558,16 +558,16 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00
 
 
 ################################################################
-######################hmmscan_10################################
+######################hmmscan_pref##############################
 CPU_NUM=20
-search_params=_10
+search_params=_pref
 # Note that the e-value reported by HMMER cannot go above 10 even if a higher number is set.
 sh_path=./tmp/jobs/hmm_split_ag_split${search_params}_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
     echo "hmmscan --cpu ${CPU_NUM} --tblout ${alis_path}/hmmscan${search_params}_B${i}.tsv -o ${alis_path}/hmmscan${search_params}_large_file_B${i}.tsv ./data/raw/dbs/pfam_split_target/pfam.hmm ./data/raw/dbs/pfam_split_query/B${i}/pfam.fasta" >> ${sh_path}
 done
-python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "3:00:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00" --search_category split_pf; sbatch ${sh_path/.sh/_slurm_job.sh}
 
 
 #To run on a single machine:
