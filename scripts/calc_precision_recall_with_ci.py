@@ -112,8 +112,9 @@ f1_ci_dict = {x:bootstrap_f1(y) for x,y in method_df_dict.items()} # Find the F1
 prec_recall = {x: calc_precision_recall_vs_evalue(y) for x,y in method_df_dict.items()}  # Calculates precision and recall for each tool
 f1_dict = {x: calc_maxf1_precision_recall_evalue(y) for x, y in prec_recall.items()}
 
-trim_first_rows_frac = 0.05
-prec_recall = {x: y[y["row_num"] >= trim_first_rows_frac * total_q_num] for x,y in prec_recall.items()}  # Get rid of the first 5% because it is noisy
+#Commented to get rid of top hits by filtering rows with e-value smaller than 10^-9
+#trim_first_rows_frac = 0.05 
+#prec_recall = {x: y[y["row_num"] >= trim_first_rows_frac * total_q_num] for x,y in prec_recall.items()}  # Get rid of the first 5% because it is noisy
 
 all_f1_data = {x: {**f1_ci_dict[x], **f1_dict[x], "precision_vs_recall": prec_recall[x]} for x in method_df_dict.keys()}
 with open(f"{data_dir}/processed/f1_data.pkl", 'wb') as file:

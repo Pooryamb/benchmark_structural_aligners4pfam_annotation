@@ -201,6 +201,7 @@ mv ./tmp/extra/filepaths4prank.txt .; $PRANK_PATH predict -c alphafold filepaths
 mkdir -p ./tmp/residue_features/
 python scripts/store_pocket_coordinates_json.py    # For each seed, writes the positions of highly confident pocket amino acids
 python scripts/find_conserved_residues.py          # For each seed, writes the location of conserved residues
+python scripts/find_seeds_with_low_confidence_conserved_sites.py  # Finds the seeds whose average pLDDT for the conserved sites is lower than the average pLDDT of the domain
 ### python scripts/make_all_residues_json.py           # Creates a dumb json containing all locations of residues of seeds (we don't need it anymore)
 ```
 
@@ -605,6 +606,20 @@ mkdir -p ./tmp/first_hits
 # If the issue with Reseek is resolved, the ./scripts/select_top_hits.py script must be adjusted.
 python ./scripts/select_top_hits.py
 ```
+Using the following script, precision and recall for selecting the best hit while conducting split-family vs. split family
+searching is calculated. Confidence intervals are calculated by bootstrapping.
+
+```
+python ./scripts/calc_precision_recall_with_ci.py
+```
+
+The precision recall curve can be visualized using the scripts/precision_recall_split_vs_split.ipynb jupyter notebook.
+
+Following script can be used to find the dependence of performance on each seed feature:
+
+```
+python ./scripts/calc_feature_importance4sffp.py
+```
 
 ### Residue level alignment for HMMER
 
@@ -618,16 +633,25 @@ mkdir -p ./tmp/alis/fam_alis/hmmscan/
 parallel 'fam=$(basename {} .fasta); hmmscan --cpu 1 --max --tblout ./tmp/alis/fam_alis/hmmscan/${fam}.tsv -o ./tmp/alis/fam_alis/hmmscan/${fam}_large_file.txt ./data/raw/dbs/pfam_split_target/grp_by_family/${fam}.hmm data/raw/dbs/pfam_split_query/grp_by_family/${fam}.fasta' ::: ./data/raw/dbs/pfam_split_query/grp_by_family/*.fasta
 
 
+# The following lines are used to make the gold standard
 python scripts/find_msa_hmm_mapping.py   # Finds the correspondence between the msa and hmm columns
 python scripts/find_q_hmm_mapping.py     # Finds the residue level alignment between random query sample and the hmm profiles
 python scripts/find_seed_msa_mapping.py  # Finds the mapping between seed coordinates and curated MSA coordinates
 
 mkdir -p data/processed/residue_ali_frac_per_seed_split_vs_split
-python ./scripts/summarize_residue_alignment4hmmscan.py
-python ./scripts/adjust_pwa_res_ali4split_vs_split.py
+python ./scripts/summarize_residue_alignment4hmmscan.py  # Finds the fraction of correctly aligned residues for HMMER output
+python ./scripts/summarize_residue_alignment4pwas.py     # Finds the average of fraction of correctly aligned residues for each query (for pairwise aligners)
+
 
 # Performance plots can be generated using the scripts/plot_residue_level_alignments-split_vs_split.ipynb notebook
 For what percentage, the first hit was correct
 Using different thresholds, what percentage becomes correct, what percentage is incorrect
+
+```
+
+### Visualize residue alignment
+
+```
+python ./scripts/preprocess_residue_alignment_data.py
 
 ```
