@@ -655,3 +655,69 @@ Using different thresholds, what percentage becomes correct, what percentage is 
 python ./scripts/preprocess_residue_alignment_data.py
 
 ```
+
+## Rescoring hits
+First, an MSA is created of the sequences of each domain. As PSI-blast requires to use a sequence as a reference sequence, we use the sequence
+emited by hmmemit as the consensus sequence and make the MSA from split target + consensus sequence.
+
+
+```
+python scripts/make_fasta_msas_from_target_split.py #Used to generate MSAs in fasta format (for PSSM generation):
+fake_fasta_path=tmp/fake_seq.fasta
+# psiblast needs to run the profile against a sequence
+touch ${fake_fasta_path}
+echo -e '>A\nAA' > ${fake_fasta_path}
+
+ls ./data/raw/dbs/pfam_split_target/grp_by_family/PF*.fasta | \
+parallel 'psiblast -in_msa {} -out_ascii_pssm {= s/fasta/pssm/ =} -subject '"$fake_fasta_path"' >> tmp/logs/pssm_generation.txt'
+
+for fasta_path in $(ls ./data/raw/dbs/pfam_split_target/grp_by_family/PF*.fasta)
+do
+    psiblast -in_msa $fasta_path -out_ascii_pssm ${fasta_path/fasta/pssm} -subject $fake_fasta_path >> tmp/logs/pssm_generation.txt
+done
+```
+
+
+Run the search using sensitive mode and store the results:
+```
+CHUNK_NUM=16
+mkdir -p tmp/timestamps/split_pf_seq
+mkdir -p tmp/alis/split_pf_seq
+mkdir -p tmp/alidbs/
+mkdir -p tmp/logs/search/split_pf_seq
+mkdir -p tmp/jobs
+mkdir -p tmp/fstmp/split_pf_seq
+
+dbs_path="./data/raw/dbs/"
+alis_path="tmp/alis/split_pf_seq"
+tmp_path="tmp/fstmp/split_pf_seq"
+
+
+################################################################
+####################Reseek-sens#################################
+
+search_params=_sens
+sh_path=./tmp/jobs/rs_split_ag_split${search_params}_plus_seq_commands.sh
+db_size=128502  ## Strangely, Reseek used the db_size of 10,000.
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "reseek -search ${dbs_path}/pfam_split_query/B${i}/pfam.bca -db ${dbs_path}/pfam_split_target/pfam.bca -output ${alis_path}/reseek${search_params}_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq+qrow+trow  -verysensitive -evalue 1e99" >> ${sh_path}
+done
+
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "2:15:00" --search_category split_pf_seq; sbatch ${sh_path/.sh/_slurm_job.sh}
+
+
+################################################################
+###################Foldseek-pref################################
+
+search_params=_pref
+sh_path=./tmp/jobs/fs_split_ag_split${search_params}_plus_seq_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "foldseek easy-search -e inf ${dbs_path}/pfam_split_query/B${i}/pfam ${dbs_path}/pfam_split_target/pfam ${alis_path}/fs${search_params}_B${i}.tsv ${tmp_path}/pfam_fs${search_params}_B${i} --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,qaln,taln" >> ${sh_path}
+done
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00" --search_category split_pf_seq; sbatch ${sh_path/.sh/_slurm_job.sh}
+#bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
+```
+
+Next, a PSSM is created from each MSA.
