@@ -1,3 +1,4 @@
 data/
 tmp/
 figures/
+scripts/__pycache__/
