@@ -675,7 +675,15 @@ for fasta_path in $(ls ./data/raw/dbs/pfam_split_target/grp_by_family/PF*.fasta)
 do
     psiblast -in_msa $fasta_path -out_ascii_pssm ${fasta_path/fasta/pssm} -subject $fake_fasta_path >> tmp/logs/pssm_generation.txt
 done
+
+python scripts/parse_pssm.py   # The PSSMs are parsed and stored in pickle format
+python scripts/find_seed2cons_mapping.py  # maps the residues of each seeds to the domain consensus
 ```
+
+
+
+
+
 
 
 Run the search using sensitive mode and store the results:
@@ -720,4 +728,3 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:0
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
 ```
 
-Next, a PSSM is created from each MSA.
