@@ -2,3 +2,5 @@ data/
 tmp/
 figures/
 scripts/__pycache__/
+scripts/.ipynb_checkpoints/
+.ipynb_checkpoints/
