@@ -61,5 +61,6 @@ for family in mapping_data:
     fasta_out_path = sto_path.replace(".sto", ".fasta")
     with open(fasta_out_path, 'w') as ofile:
         ofile.write(f">{family}_consensus\n{aligned_cons_seq}\n")
+        cons_len = len(aligned_cons_seq)  # The length of each seed must be equal to the length of the consensus
         for key, value in fasta_in_dict.items():
-            ofile.write(f">{key}\n{value}\n")
+            ofile.write(f">{key}\n{value[:cons_len]}\n")
