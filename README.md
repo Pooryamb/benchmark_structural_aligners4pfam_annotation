@@ -704,7 +704,7 @@ tmp_path="tmp/fstmp/split_pf_seq"
 ################################################################
 ####################Reseek-sens#################################
 
-search_params=_sens
+search_params=_exh # The reseek sensitive does not work properly!!!
 sh_path=./tmp/jobs/rs_split_ag_split${search_params}_plus_seq_commands.sh
 db_size=128502  ## Strangely, Reseek used the db_size of 10,000.
 rm -f ${sh_path}
@@ -712,8 +712,10 @@ for i in $(seq 1 $CHUNK_NUM); do
     echo "reseek -search ${dbs_path}/pfam_split_query/B${i}/pfam.bca -db ${dbs_path}/pfam_split_target/pfam.bca -output ${alis_path}/reseek${search_params}_B${i}.tsv -columns query+target+qlo+qhi+ql+tlo+thi+tl+pctid+evalue+aq+qrow+trow  -verysensitive -evalue 1e99" >> ${sh_path}
 done
 
-python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "2:15:00" --search_category split_pf_seq; sbatch ${sh_path/.sh/_slurm_job.sh}
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00" --search_category split_pf_seq; sbatch ${sh_path/.sh/_slurm_job.sh}
 
+python scripts/select_sens_rows_from_exh_search.py  # This will find the sens rows among exhaustive search
+python scripts/select_sens_rows_from_exh_search.py
 
 ################################################################
 ###################Foldseek-pref################################
@@ -728,3 +730,7 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:0
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
 ```
 
+Using the following job, the hits will be rescored by psiblast scoring matrix:
+```
+python scripts/calc_psiblast_raw_score.py
+```
