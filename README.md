@@ -6,7 +6,7 @@ You require the following libraries for this benchmarking:
 * Pandas (version 2.2.2)
 * Polars (version 1.0.0)
 * p2rank (version 2.5.1-dev.3)
-
+* Numba (version 0.61.2)
 
 
 To start, make sure that both reseek, foldseek, and mmseqs have been added to 
@@ -732,5 +732,7 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:0
 
 Using the following job, the hits will be rescored by psiblast scoring matrix:
 ```
+# on CC: module load CCEnv StdEnv python/3.13 arrow scipy-stack
+# on CC: source ~/pooryamb/str_align_benchmark/bin/activate
 python scripts/calc_psiblast_raw_score.py
 ```
