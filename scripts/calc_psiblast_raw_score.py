@@ -8,7 +8,27 @@ import numba as nb
 import swifter
 from headers import fam_ali_headers
 from concurrent.futures import ProcessPoolExecutor
+import argparse
 
+
+script_dir = os.path.dirname(os.path.realpath(__file__))
+base_dir = os.path.join(script_dir, "..")
+
+
+parser = argparse.ArgumentParser(description="Calculates the psi-blast raw score for the alignments provided either by Foldseek or Reseek")
+parser.add_argument("--alis", type=str, required=True, help="This could be r (for all reseek alignments), f (for all foldseek alignments, a for all foldseek and reseek, or a filepath for a specific file")
+args = parser.parse_args()
+
+if args.alis == "f":
+    inp_paths = glob.glob(f"{base_dir}/tmp/alis/split_pf_seq/fs_pref*")
+elif args.alis == "r":
+    inp_paths = glob.glob(f"{base_dir}/tmp/alis/split_pf_seq/reseek_sens*")
+elif args.alis == "a":
+    inp_paths = glob.glob(f"{base_dir}/tmp/alis/split_pf_seq/fs_pref*") + glob.glob(f"{base_dir}/tmp/alis/split_pf_seq/reseek_sens*")
+else:
+    inp_paths = [args.alis]
+
+inp_paths = [x for x in inp_paths if "rescored" not in x]
 
 @nb.njit
 def map_residues_with_gaps_numba(qseq, tseq, qstart=1, tstart=1):
@@ -81,7 +101,7 @@ def split_scoring_data(ali_df, pssms, seed2cons_mapping):
 
     """It splits the alignment dataframe, PSSMs, and residue mappings into multiple chunks for speed up"""
     ali_df = ali_df.sort_values(by="t_family").reset_index(drop=True)
-    cpu_count = 20 ####################################################################os.cpu_count()
+    cpu_count = os.cpu_count()
     ali_dfs = np.array_split(ali_df, cpu_count)
     chunked_data = []
     for chunk in ali_dfs:
@@ -105,9 +125,6 @@ def rescore_handler(args):
     return rescore_dataframe(args["ali_df"], args["pssms"], args["seed2cons_mapping"])
 
 
-script_dir = os.path.dirname(os.path.realpath(__file__))
-base_dir = os.path.join(script_dir, "..")
-
 # Load the PSSM data
 with open(f"{base_dir}/data/processed/parsed_pssm.pkl", 'rb') as file:
     pssm_data_dict = pickle.load(file)
@@ -126,8 +143,8 @@ fs_header.remove("lddtfull")
 rs_header = fam_ali_headers["rs"]
 
 
-inp_paths = glob.glob(f"{base_dir}/tmp/alis/split_pf_seq/fs_pref*") + glob.glob(f"{base_dir}/tmp/alis/split_pf_seq/reseek_sens*")
-inp_paths = [x for x in inp_paths if "rescored" not in x]
+#inp_paths = glob.glob(f"{base_dir}/tmp/alis/split_pf_seq/fs_pref*") + glob.glob(f"{base_dir}/tmp/alis/split_pf_seq/reseek_sens*")
+#inp_paths = [x for x in inp_paths if "rescored" not in x]
 
 for inp_path in inp_paths:
     print(f"processing {inp_path}")
@@ -135,7 +152,7 @@ for inp_path in inp_paths:
         columns = rs_header
     elif "fs_pref" in os.path.basename(inp_path):
         columns = fs_header
-    ali_df = pd.read_csv(inp_path, sep="\t", header=None, names=columns)
+    ali_df = pd.read_csv(inp_path, sep="\t", header=None, names=columns, keep_default_na=False, na_values=[""])
     ali_df["t_family"] = ali_df["target"].str.split("-", expand=True)[3]
     split_chunks = split_scoring_data(ali_df, pssms, seed2cons_mapping)
 # Using a single CPU:
