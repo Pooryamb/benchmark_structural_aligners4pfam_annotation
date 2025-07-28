@@ -735,5 +735,8 @@ Using the following job, the hits will be rescored by psiblast scoring matrix:
 # on CC: module load CCEnv StdEnv python/3.13 arrow scipy-stack
 # on CC: source ~/pooryamb/str_align_benchmark/bin/activate
 python scripts/calc_psiblast_raw_score.py --alis f
-sbatch ./scripts/job4psiblast_scoring.sh
+sbatch ./scripts/job4psiblast_scoring.sh ## To run on Compute Canada
+python ./scripts/calc_bitscore_rep.py    ## Calculate the bitscore based on Profile score
+python ./scripts/calc_sffp4split_alis_rescored.py  ## Calculate the SFFP for original alignments and the rescored ones
+
 ```
