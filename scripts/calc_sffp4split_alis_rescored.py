@@ -112,11 +112,11 @@ def find_tps_count_bef_first_fp_for_filepaths(filepaths, cols2read, col2sortby="
     return concat_df
 
 
-
-foldseek_paths = glob.glob(f"{base_dir}/tmp/alis/split_pf_seq/fs_pref*_bitscore.tsv")
-reseek_paths = glob.glob(f"{base_dir}/tmp/alis/split_pf_seq/reseek_sens_*_bitscore.tsv")
-cols2read = ["query", "target", "evalue", "pssm_raw_score", "bitscore_rep"]
-tps_bef_first_fp = {
+if __name__== "__main__":
+    foldseek_paths = glob.glob(f"{base_dir}/tmp/alis/split_pf_seq/fs_pref*_bitscore.tsv")
+    reseek_paths = glob.glob(f"{base_dir}/tmp/alis/split_pf_seq/reseek_sens_*_bitscore.tsv")
+    cols2read = ["query", "target", "evalue", "pssm_raw_score", "bitscore_rep"]
+    tps_bef_first_fp = {
                     "foldseek_bitscore": find_tps_count_bef_first_fp_for_filepaths(foldseek_paths, cols2read, col2sortby="bitscore_rep", sort_ascending=False),
                     "foldseek": find_tps_count_bef_first_fp_for_filepaths(foldseek_paths,cols2read, col2sortby="evalue", sort_ascending=True),
                     "foldseek_rescored": find_tps_count_bef_first_fp_for_filepaths(foldseek_paths,cols2read, col2sortby="pssm_raw_score", sort_ascending=False),
@@ -125,7 +125,7 @@ tps_bef_first_fp = {
                     "reseek_bitscore": find_tps_count_bef_first_fp_for_filepaths(reseek_paths, cols2read, col2sortby="bitscore_rep", sort_ascending=False)
                     }
 
-sffp_dir_path = f"{base_dir}/tmp/sffp_rescoring"
-os.makedirs(sffp_dir_path, exist_ok=True)
-for key, value in tps_bef_first_fp.items():
-    value.to_csv(f"{sffp_dir_path}/{key}.tsv", sep="\t", index=None)
+    sffp_dir_path = f"{base_dir}/tmp/sffp_rescoring"
+    os.makedirs(sffp_dir_path, exist_ok=True)
+    for key, value in tps_bef_first_fp.items():
+        value.to_csv(f"{sffp_dir_path}/{key}.tsv", sep="\t", index=None)

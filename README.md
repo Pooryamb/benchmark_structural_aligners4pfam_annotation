@@ -740,3 +740,11 @@ python ./scripts/calc_bitscore_rep.py    ## Calculate the bitscore based on Prof
 python ./scripts/calc_sffp4split_alis_rescored.py  ## Calculate the SFFP for original alignments and the rescored ones
 
 ```
+The following script will select the training data for the model that is going to predict membership in the same pfam based on pwa bitscore and psiblast bitscore:
+```
+python scripts/prepare_train_data.py
+Run the scripts/train_model.ipynb
+python scripts/calc_sffp_after_ml.py
+Run the last cell in plot_auc_sffp_psiblast_score
+
+```
