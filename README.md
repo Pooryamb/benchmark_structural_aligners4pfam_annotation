@@ -704,7 +704,7 @@ tmp_path="tmp/fstmp/split_pf_seq"
 ################################################################
 ####################Reseek-sens#################################
 
-search_params=_exh # The reseek sensitive does not work properly!!!
+search_params=_exh # The reseek sensitive does not work properly if query and target alignments are needed in the output table !!!
 sh_path=./tmp/jobs/rs_split_ag_split${search_params}_plus_seq_commands.sh
 db_size=128502  ## Strangely, Reseek used the db_size of 10,000.
 rm -f ${sh_path}
@@ -715,11 +715,21 @@ done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "1:00:00" --search_category split_pf_seq; sbatch ${sh_path/.sh/_slurm_job.sh}
 
 python scripts/select_sens_rows_from_exh_search.py  # This will find the sens rows among exhaustive search
-python scripts/select_sens_rows_from_exh_search.py
+
 
 ################################################################
-###################Foldseek-pref################################
+###################Foldseek-pref and exh########################
+# The exhaustive mode is performed to later select the pairs that reseek reports as structurally similar pairs
 
+search_params=_exh
+sh_path=./tmp/jobs/fs_split_ag_split${search_params}_plus_seq_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "foldseek easy-search --exhaustive-search 1 -e inf ${dbs_path}/pfam_split_query/B${i}/pfam ${dbs_path}/pfam_split_target/pfam ${alis_path}/fs${search_params}_B${i}.tsv ${tmp_path}/pfam_fs${search_params}_B${i} --format-output query,target,fident,alnlen,mismatch,gapopen,qstart,qend,tstart,tend,evalue,bits,qaln,taln" >> ${sh_path}
+done
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:45:00" --search_category split_pf_seq; sbatch ${sh_path/.sh/_slurm_job.sh}
+
+# The prefiltering mode is performed to later select the pairs that Foldseek reports as structurally similar pairs
 search_params=_pref
 sh_path=./tmp/jobs/fs_split_ag_split${search_params}_plus_seq_commands.sh
 rm -f ${sh_path}
