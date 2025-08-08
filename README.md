@@ -758,3 +758,13 @@ python scripts/calc_sffp_after_ml.py
 Run the last cell in plot_auc_sffp_psiblast_score
 
 ```
+
+
+
+# Classification based on important residues
+This part has scripts for finding structurally similar pairs of proteins:
+
+```
+mkdir -p tmp/structurally_similar_pairs
+```
+
