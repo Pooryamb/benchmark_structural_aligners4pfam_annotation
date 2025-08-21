@@ -84,7 +84,7 @@ def get_ali_score_for_row(row, pssms, seed2cons_mapping):
     non_gap_part = non_gap_part.merge(seed2cons_mapping[row["target"]], on="seed_coord")
     non_gap_part = non_gap_part.merge(aa2ind, left_on="q_residue", right_on="aa")
     pssm = pssms[row["t_family"]]                  # Access the PSSM of the family
-    pssm_rows2sel = (non_gap_part["cons_coord"] - 1).to_numpy() # Proper rows of PSSM
+    pssm_rows2sel = (non_gap_part["cons_coord"] - 1).to_numpy() # Proper rows of PSSM (PSSM row numbers start from 0, whereas mappings start from 1)
     pssm_cols2sel = non_gap_part["aa_ind"].to_numpy()           # Proper columns of PSSM
     no_gap_scores = pssm.values[pssm_rows2sel, pssm_cols2sel].sum()      # Select proper values from PSSM
 
