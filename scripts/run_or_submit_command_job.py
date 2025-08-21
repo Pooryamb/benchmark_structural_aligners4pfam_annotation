@@ -41,7 +41,7 @@ default_header="""#!/bin/bash
 #SBATCH --output=./tmp/{job_name}_log_%a.out
 #SBATCH --array=1-{batches}
 
-module load CCEnv StdEnv scipy-stack
+module load StdEnv scipy-stack
 source ~/iprs/bin/activate
 i=${{SLURM_ARRAY_TASK_ID}}
 

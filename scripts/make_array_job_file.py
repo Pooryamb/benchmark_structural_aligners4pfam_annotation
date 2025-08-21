@@ -24,7 +24,7 @@ job_content = """#!/bin/bash
 #SBATCH --output=tmp/logs/search/{search_category}/{job_name}_%a.out
 #SBATCH --array=1-{batch_num}
 
-module load CCEnv StdEnv scipy-stack hmmer
+module load StdEnv scipy-stack hmmer
 source ~/iprs/bin/activate
 
 touch tmp/timestamps/{search_category}/{job_name}_started_B${{SLURM_ARRAY_TASK_ID}}.txt

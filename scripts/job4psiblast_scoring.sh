@@ -3,7 +3,7 @@
 #SBATCH --output=tmp/logs/psi_blast_scoring_%a.txt
 #SBATCH --array=1-16
 
-module load CCEnv StdEnv python/3.13 scipy-stack arrow
+module load StdEnv python/3.13 scipy-stack arrow
 
 source ~/pooryamb/str_align_benchmark/bin/activate
 

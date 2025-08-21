@@ -742,7 +742,7 @@ python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:0
 
 Using the following job, the hits will be rescored by psiblast scoring matrix:
 ```
-# on CC: module load CCEnv StdEnv python/3.13 arrow scipy-stack
+# on CC: module load StdEnv python/3.13 arrow scipy-stack
 # on CC: source ~/pooryamb/str_align_benchmark/bin/activate
 python scripts/calc_psiblast_raw_score.py --alis f
 sbatch ./scripts/job4psiblast_scoring.sh ## To run on Compute Canada
@@ -759,12 +759,4 @@ Run the last cell in plot_auc_sffp_psiblast_score
 
 ```
 
-
-
-# Classification based on important residues
-This part has scripts for finding structurally similar pairs of proteins:
-
-```
-mkdir -p tmp/structurally_similar_pairs
-```
 

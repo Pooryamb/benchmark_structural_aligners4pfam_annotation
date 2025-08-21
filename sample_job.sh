@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --time=02:00:00
 
-module load CCEnv StdEnv scipy-stack
+module load StdEnv scipy-stack
 
 
 touch tmp/timestamps/started_binning
