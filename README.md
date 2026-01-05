@@ -867,18 +867,18 @@ options="easy-search -e inf --exhaustive-search 1"
 ali_dir="tmp/alis"
 
 cut_type="cif"
-cif_cut_db_tb="data/raw/dbs/tb_pfam_${cut_type}_cut/tb_pfam_${cut_type}_cut"
-cif_cut_db_pf="data/raw/dbs/pfam_${cut_type}_cut_clust/pfam"
+q_db_tb="data/raw/dbs/tb_pfam_${cut_type}_cut/tb_pfam_${cut_type}_cut"
+t_db_pf="data/raw/dbs/pfam_${cut_type}_cut_clust/pfam"
 ali_path="${ali_dir}/tbpf_pfam_${cut_type}_exh.tsv"
 tmp_path="tmp/fstmp/tbpf_pf_${cut_type}_cut"
-foldseek ${options} ${cif_cut_db_tb} ${cif_cut_db_pf} ${ali_path} ${tmp_path}
+foldseek ${options} ${q_db_tb} ${t_db_pf} ${ali_path} ${tmp_path}
 
 cut_type="fs"
-fs_cut_db_tb="data/raw/dbs/tb_pfam_${cut_type}_cut/tb_pfam_${cut_type}_cut"
-fs_cut_db_pf="data/raw/dbs/pfam_${cut_type}_cut_clust/pfam"
+q_db_tb="data/raw/dbs/tb_pfam_${cut_type}_cut/tb_pfam_${cut_type}_cut"
+t_db_pf="data/raw/dbs/pfam_${cut_type}_cut_clust/pfam"
 ali_path="${ali_dir}/tbpf_pfam_${cut_type}_exh.tsv"
 tmp_path="tmp/fstmp/tbpf_pf_${cut_type}_cut"
-foldseek $options ${cif_cut_db_tb} ${cif_cut_db_pf} ${ali_path} ${tmp_path}
+foldseek ${options} ${q_db_tb} ${t_db_pf} ${ali_path} ${tmp_path}
 
 ```
 
