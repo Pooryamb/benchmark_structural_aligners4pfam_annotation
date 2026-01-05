@@ -882,3 +882,7 @@ foldseek $options ${cif_cut_db_tb} ${cif_cut_db_pf} ${ali_path} ${tmp_path}
 
 ```
 
+Select the first hit of each label:
+```
+ls tmp/alis/tbpf_pfam_*tsv | parallel "python scripts/find_nonred_labels.py --input {} --search_tool fs --remove_cif_ext True"
+```

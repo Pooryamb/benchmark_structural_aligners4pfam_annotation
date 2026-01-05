@@ -7,9 +7,11 @@ def label_pf_clan_chunk(input_path,
                         clan_info_path="./data/raw/pfam_clan_info.tsv",
                         remove_cif_ext="Auto",
                         remove_self_matches=True,
-                        chunksize=10_000):
-    """Requires the input_path. It assumes the input is in the following format: {search_tool}_B{batch_num}.tsv"""
-    search_tool = os.path.basename(input_path).split("_B")[0]
+                        chunksize=100_000,
+                        search_tool="Auto"):
+    """Requires the input_path. If search_tool is set to Auto, the input should be in the following format: {search_tool}_B{batch_num}.tsv"""
+    if search_tool == "Auto":
+        search_tool = os.path.basename(input_path).split("_B")[0]
     ali_header = headers[search_tool]
     ipr_clan_df = pd.read_csv(clan_info_path, sep="\t")
     if remove_cif_ext == "True":
