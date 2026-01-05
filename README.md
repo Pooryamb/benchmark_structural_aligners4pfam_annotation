@@ -759,4 +759,126 @@ Run the last cell in plot_auc_sffp_psiblast_score
 
 ```
 
+# Find the reason behind fs_cut and cif_cut performance discrepancy
+We download the T. brucei structures and cut to align against PfamSDB. First, we see if not using a prefilter and doing an exhaustive search shows some differences.
+
+```
+tb_af_file_name=UP000008524_185431_TRYB2_v4.tar
+wget https://ftp.ebi.ac.uk/pub/databases/alphafold/v4/${tb_af_file_name}
+mkdir -p data/raw/tb_cif/
+mv ${tb_af_file_name} ./data/raw/tb_cif/
+# AlphaFold tar files come with both cif and pdb file formats. We just need the cif files, so we remove the pdb files and make a new tar file.
+cd ./data/raw/tb_cif/
+tar -xf ${tb_af_file_name}
+rm -f *.pdb.gz
+rm -f ${tb_af_file_name}
+tar -cf ${tb_af_file_name} *.cif.gz
+rm -f *.cif.gz
+cd ../../..
+foldseek createdb ./data/raw/tb_cif/${tb_af_file_name} ./data/raw/dbs/tb/tb  # Make a foldseek database of T. brucei
+```
+
+
+## Search Tb against Pfam
+
+```
+mkdir -p tmp/fstmp/
+options="easy-search -e inf --greedy-best-hits 1"
+tb_db_path="data/raw/dbs/tb/tb"
+ali_dir="tmp/alis"
+
+# Prefiltered alignment
+cut_type=fs
+ali_path="${ali_dir}/tb_pfam_${cut_type}.tsv"
+pfam_path="data/raw/dbs/pfam_${cut_type}_cut_clust/pfam"
+tmp_path="tmp/fstmp/tb_pf_${cut_type}_cut"
+foldseek $options ${tb_db_path} ${pfam_path} ${ali_path} ${tmp_path}
+
+# Exhaustive alignment
+ali_path="${ali_dir}/tb_pfam_${cut_type}_exh.tsv"
+tmp_path="tmp/fstmp/tb_pf_${cut_type}_cut_exh"
+foldseek $options --exhaustive-search 1 ${tb_db_path} ${pfam_path} ${ali_path} ${tmp_path} # Takes ~20 mins on CC
+
+# Prefiltered alignment
+cut_type=cif
+pfam_cif_cut_path="data/raw/dbs/pfam_${cut_type}_cut_clust/pfam"
+ali_path="${ali_dir}/tb_pfam_${cut_type}.tsv"
+pfam_path="data/raw/dbs/pfam_${cut_type}_cut_clust/pfam"
+tmp_path="tmp/fstmp/tb_pf_${cut_type}_cut"
+foldseek $options ${tb_db_path} ${pfam_path} ${ali_path} ${tmp_path}
+
+# Exhaustive alignment
+ali_path="${ali_dir}/tb_pfam_${cut_type}_exh.tsv"
+tmp_path="tmp/fstmp/tb_pf_${cut_type}_cut_exh"
+foldseek $options --exhaustive-search 1 ${tb_db_path} ${pfam_path} ${ali_path} ${tmp_path} # Takes ~20 mins on CC
+```
+
+Now, we make a database of T. brucei domains using two different methods. We do the following accordingly:
+
+Download InterPro
+
+```
+cd data
+ipr_file_name=protein2ipr.dat.gz
+aria2c -s16 https://ftp.ebi.ac.uk/pub/databases/interpro/releases/100.0/${ipr_file_name}
+
+cd ..
+```
+
+Retrieve T. brucei domain annotations from InterPro
+
+```
+python scripts/extract_tb_unip_ids.py
+ipr_file_path="./data/protein2ipr.dat.gz"
+tb_file_path="./data/tb_unip_ids.tsv"
+join -1 1 -2 1 <(zcat ${ipr_file_path}) <(sort ${tb_file_path}) > ./data/tb_ipr.tsv
+python scripts/extract_pf_data_from_ipr.py  # Extracts the pfam related data from interpro annotations
+```
+
+
+Make a database of cut cif files (T. brucei proteome):
+```
+python scripts/cut_tb_cif_files.py
+cd data/raw/tb_pfam/
+ls *.cif | parallel gzip
+tar -cf tb_pfam.tar *.cif.gz
+ls *.cif.gz | parallel rm
+cd ../../../
+mkdir -p ./data/raw/dbs/tb_pfam_cif_cut
+foldseek createdb ./data/raw/tb_pfam/tb_pfam.tar ./data/raw/dbs/tb_pfam_cif_cut/tb_pfam_cif_cut
+
+```
+
+Make a database of cut cif files (T. brucei proteome):
+
+```
+python scripts/convert_fsdb2fasta.py --db_path ./data/raw/dbs/tb/tb # Convert the foldseek database to the fasta files
+mkdir -p ./data/raw/dbs/tb_pfam_fs_cut
+python scripts/cut_fasta_and_store_in_tsv.py --fasta_path ./data/raw/dbs/tb/tb --output_path ./data/raw/dbs/tb_pfam_fs_cut/tb_pfam_fs_cut --cut_recipe_path ./data/tb_pfam.tsv
+python scripts/convert_tsv2fsdb.py --tsv_path ./data/raw/dbs/tb_pfam_fs_cut/tb_pfam_fs_cut
+```
+
+Search tb_pfam ag. PfamDB:
+
+```
+
+# Takes ~15 mins on Trillium Node
+options="easy-search -e inf --exhaustive-search 1"
+ali_dir="tmp/alis"
+
+cut_type="cif"
+cif_cut_db_tb="data/raw/dbs/tb_pfam_${cut_type}_cut/tb_pfam_${cut_type}_cut"
+cif_cut_db_pf="data/raw/dbs/pfam_${cut_type}_cut_clust/pfam"
+ali_path="${ali_dir}/tbpf_pfam_${cut_type}_exh.tsv"
+tmp_path="tmp/fstmp/tbpf_pf_${cut_type}_cut"
+foldseek ${options} ${cif_cut_db_tb} ${cif_cut_db_pf} ${ali_path} ${tmp_path}
+
+cut_type="fs"
+fs_cut_db_tb="data/raw/dbs/tb_pfam_${cut_type}_cut/tb_pfam_${cut_type}_cut"
+fs_cut_db_pf="data/raw/dbs/pfam_${cut_type}_cut_clust/pfam"
+ali_path="${ali_dir}/tbpf_pfam_${cut_type}_exh.tsv"
+tmp_path="tmp/fstmp/tbpf_pf_${cut_type}_cut"
+foldseek $options ${cif_cut_db_tb} ${cif_cut_db_pf} ${ali_path} ${tmp_path}
+
+```
 
