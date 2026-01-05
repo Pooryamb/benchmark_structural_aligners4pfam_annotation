@@ -62,7 +62,7 @@ with open(f"{fasta_path}.fasta") as seq_file, \
 
         for cut_positions in cut_coords[unipid]:
             domstart, domend, pfid = cut_positions
-            cut_seq_id = f"{unipid}_{domstart}_{domend}_{pfid}"
+            cut_seq_id = f"{unipid}-{domstart}-{domend}-{pfid}"
             cut_seq = cut_normalseq(fl_seq, domstart, domend)
             cut_ss_seq= cut_normalseq(fl_ss_seq, domstart, domend)
             cut_ca_seq=cut_caseq(fl_ca_seq, domstart, domend)
