@@ -14,7 +14,7 @@ parser.add_argument("--output", type=str, help="The first occurence of each labe
 "will be saved here. It shows the first Pfam or Clan level label")
 parser.add_argument("--clan_info_path", default="./data/raw/pfam_clan_info.tsv", type=str, help= "The path to the file relating pfam to clan")
 parser.add_argument("--remove_cif_ext", type=str, default="Auto", help= "Do you want the cif extension? True/False/Auto")
-parser.add_argument("--chunksize", type=int, default=100_000, help="The number of rows to be read at once")
+parser.add_argument("--chunksize", type=int, default=10_000, help="The number of rows to be read at once")
 parser.add_argument("--search_tool", type=str, default="Auto", help="The search tool used to generate the input file. If set to Auto, the input should be in the following format: {search_tool}_B{batch_num}.tsv")
 
 args = parser.parse_args()

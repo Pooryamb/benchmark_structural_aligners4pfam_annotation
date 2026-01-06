@@ -882,7 +882,29 @@ foldseek ${options} ${q_db_tb} ${t_db_pf} ${ali_path} ${tmp_path}
 
 ```
 
-Select the first hit of each label:
+Split the files into smaller chunks to make their memory managable. It takes 6 mins to split the files
 ```
-ls tmp/alis/tbpf_pfam_*tsv | parallel "python scripts/find_nonred_labels.py --input {} --search_tool fs --remove_cif_ext True"
+python scripts/split_txt_file.py --input ./tmp/alis/tbpf_pfam_cif_exh.tsv # The script makes a directory with the same name, and stores the chunks in it
+python scripts/split_txt_file.py --input ./tmp/alis/tbpf_pfam_fs_exh.tsv 
+```
+
+
+Select the first hit of each label. It takes ~ 2 mins on Trillion Node:
+```
+mkdir -p data/processed/first_label_occ/tbpf_pfam_fs_exh data/processed/first_label_occ/tbpf_pfam_cif_exh
+
+ls tmp/alis/tbpf_pfam_fs_exh/part_*.tsv | parallel \
+    "python scripts/find_nonred_labels.py \
+    --input {} \
+    --search_tool fs \
+    --remove_cif_ext False \
+    --output data/processed/first_label_occ/tbpf_pfam_fs_exh/{/}"
+
+
+ls tmp/alis/tbpf_pfam_cif_exh/part_*.tsv | parallel \
+    "python scripts/find_nonred_labels.py \
+    --input {} \
+    --search_tool fs \
+    --remove_cif_ext True \
+    --output data/processed/first_label_occ/tbpf_pfam_cif_exh/{/}"
 ```
