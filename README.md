@@ -908,3 +908,10 @@ ls tmp/alis/tbpf_pfam_cif_exh/part_*.tsv | parallel \
     --remove_cif_ext True \
     --output data/processed/first_label_occ/tbpf_pfam_cif_exh/{/}"
 ```
+
+Use the following script to integrate all batches into one
+
+```
+python ./scripts/integrate_first_occ4tb.py --input_dir "./data/processed/first_label_occ/tbpf_pfam_cif_exh"
+python ./scripts/integrate_first_occ4tb.py --input_dir "./data/processed/first_label_occ/tbpf_pfam_fs_exh"
+```
