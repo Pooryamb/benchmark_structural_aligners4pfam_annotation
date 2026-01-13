@@ -945,3 +945,14 @@ done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 
 ```
+Use the following scripts to find the first occurence of each hit:
+
+```
+ls tmp/alis/sample_pf/fs_cut_cif_cut_B*.tsv | parallel \
+    "python scripts/find_nonred_labels.py \
+    --input {} \
+    --search_tool fs \
+    --remove_cif_ext True"
+
+
+```
