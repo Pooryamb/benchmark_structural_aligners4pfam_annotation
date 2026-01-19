@@ -145,6 +145,16 @@ done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
 
+
+sh_path=./tmp/jobs/fscut_samp_ag_cif_clust_exh_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "foldseek easy-search --exhaustive-search 1 -e inf ${dbs_path}/pfam_fs_cut_sample/B${i}/pfam ${dbs_path}/pfam_cif_cut_clust/pfam ${alis_path}/fs_cut_cif_cut_B${i}.tsv ${tmp_path}/pfam_fs_cut_cif_cut_B${i}" >> ${sh_path}
+done
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
+#bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
+
+
 sh_path=./tmp/jobs/mm_samp_ag_clust_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
@@ -255,7 +265,40 @@ Run time on Niagara Node of Compute Canada: 1 hour.
 mkdir -p data/processed/first_label_occ
 
 file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "*.tsv")
-echo "$file_paths" | parallel "python scripts/find_nonred_labels.py --input {}"
+
+ls tmp/alis/sample_pf/cif_cut_B*.tsv | parallel "python scripts/find_nonred_labels.py \
+    --input {} \
+    --search_tool fs \
+    --remove_cif_ext True"
+
+ls tmp/alis/sample_pf/fs_cut_B*.tsv | parallel "python scripts/find_nonred_labels.py \
+    --input {} \
+    --search_tool fs \
+    --remove_cif_ext False"
+
+ls tmp/alis/sample_pf/fs_cut_cif_cut_B*.tsv | parallel \
+    "python scripts/find_nonred_labels.py \
+    --input {} \
+    --search_tool fs \
+    --remove_cif_ext True"
+
+ls tmp/alis/sample_pf/mm_B*.tsv | parallel "python scripts/find_nonred_labels.py \
+    --input {} \
+    --search_tool mm \
+    --remove_cif_ext True"
+
+ls tmp/alis/sample_pf/reseek_B*.tsv | parallel "python scripts/find_nonred_labels.py \
+    --input {} \
+    --search_tool fs \
+    --remove_cif_ext True"
+
+ls tmp/alis/sample_pf/tm_B*.tsv | parallel "python scripts/find_nonred_labels.py \
+    --input {} \
+    --search_tool fs \
+    --remove_cif_ext True"
+
+
+
 python ./scripts/convert_first_occ2sffp_ci.py  # Prepares the whole data for the SFFP plot. It will calculate the AUC for SFFP, CIs for AUC_SFFP, SFFP plot, and CIs for SFFP plot
 
 ```
