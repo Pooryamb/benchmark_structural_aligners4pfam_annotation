@@ -322,7 +322,7 @@ echo "$combined_paths" | parallel "python scripts/find_evalue_stratified_labels.
 
 combined_paths=$(printf "%s\n%s\n%s" "$reseek_file_paths" "$fs_file_paths" "$fs_cif_file_paths") # process 3 at a time
 echo "$combined_paths" | parallel "python scripts/find_evalue_stratified_labels.py --input {}"
-
+python scripts/calc_cve_and_ci.py # Calculates the confidence interval 
 ```
 Then, run the Jupyter notebook (COV_SFFP_stratified_performance) to visualize the performance plots.
 
