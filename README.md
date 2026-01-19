@@ -309,8 +309,19 @@ For CVE plot, we plot sensitivity vs error for different e-value thresholds. To 
 we first find the number of rows with each e-value threshold. The following snippet can do this task:
 ```
 mkdir -p data/processed/evalue_bins
-file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "*_B*.tsv")
-echo "$file_paths" | parallel "python scripts/find_evalue_stratified_labels.py --input {}"
+
+mm_file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "mm_B[0-9]*.tsv")
+cif_file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "cif_cut_B[0-9]*.tsv")
+tm_file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "tm_B[0-9]*.tsv")
+reseek_file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "reseek_B[0-9]*.tsv")
+fs_file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "fs_cut_B[0-9]*.tsv")
+fs_cif_file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "fs_cut_cif_cut_B[0-9]*.tsv")
+
+combined_paths=$(printf "%s\n%s\n%s" "$mm_file_paths" "$cif_file_paths" "$tm_file_paths") # process 3 files at a time
+echo "$combined_paths" | parallel "python scripts/find_evalue_stratified_labels.py --input {}"
+
+combined_paths=$(printf "%s\n%s\n%s" "$reseek_file_paths" "$fs_file_paths" "$fs_cif_file_paths") # process 3 at a time
+echo "$combined_paths" | parallel "python scripts/find_evalue_stratified_labels.py --input {}"
 
 ```
 Then, run the Jupyter notebook (COV_SFFP_stratified_performance) to visualize the performance plots.

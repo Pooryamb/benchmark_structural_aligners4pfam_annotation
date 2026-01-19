@@ -73,7 +73,7 @@ for chunk in label_pf_clan_chunk(args.input, remove_self_matches=False):
         # Align the indices for addition with fill_value=0
         processed_df = processed_df.add(head_chunk_result, fill_value=0)
 
-    buffer_df =  chunk[chunk["query"] != head_id]
+    buffer_df = chunk[chunk["query"] != head_id]
     last_id = head_id
 
 processed_df.reset_index().to_csv(args.output, sep="\t", header=is_first_q, index=False, mode='a')

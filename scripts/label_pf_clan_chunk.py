@@ -19,7 +19,7 @@ def label_pf_clan_chunk(input_path,
     elif remove_cif_ext == "False":
         remove_cif = False
     elif remove_cif_ext == "Auto":
-        if ".cif" in open(input_path).readline().split()[0]:
+        if ".cif" in open(input_path).readline().split()[0] or ".cif" in open(input_path).readline().split()[1]:
             remove_cif = True
         else:
             remove_cif = False
