@@ -116,6 +116,7 @@ mkdir -p tmp/fstmp/sample_pf
 dbs_path="./data/raw/dbs/"
 alis_path="tmp/alis/sample_pf"
 tmp_path="tmp/fstmp/sample_pf"
+CHUNK_NUM=16
 
 mkdir -p tmp/alis/sample_pf_sorted/
 sh_path=./tmp/jobs/rs_samp_ag_clust_exh_commands.sh
@@ -150,6 +151,15 @@ sh_path=./tmp/jobs/fscut_samp_ag_cif_clust_exh_commands.sh
 rm -f ${sh_path}
 for i in $(seq 1 $CHUNK_NUM); do
     echo "foldseek easy-search --exhaustive-search 1 -e inf ${dbs_path}/pfam_fs_cut_sample/B${i}/pfam ${dbs_path}/pfam_cif_cut_clust/pfam ${alis_path}/fs_cut_cif_cut_B${i}.tsv ${tmp_path}/pfam_fs_cut_cif_cut_B${i}" >> ${sh_path}
+done
+python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
+#bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
+
+
+sh_path=./tmp/jobs/cifcut_samp_ag_fs_clust_exh_commands.sh
+rm -f ${sh_path}
+for i in $(seq 1 $CHUNK_NUM); do
+    echo "foldseek easy-search --exhaustive-search 1 -e inf ${dbs_path}/pfam_cif_cut_sample/B${i}/pfam ${dbs_path}/pfam_fs_cut_clust/pfam ${alis_path}/cif_cut_fs_cut_B${i}.tsv ${tmp_path}/pfam_cif_cut_fs_cut_B${i}" >> ${sh_path}
 done
 python ./scripts/make_array_job_file.py --input_sh_path $sh_path --time "00:15:00"; sbatch ${sh_path/.sh/_slurm_job.sh}
 #bash $sh_path   #This is for running on a single machine. The upper line should be commented if this one is going to be run
@@ -282,6 +292,12 @@ ls tmp/alis/sample_pf/fs_cut_cif_cut_B*.tsv | parallel \
     --search_tool fs \
     --remove_cif_ext True"
 
+ls tmp/alis/sample_pf/cif_cut_fs_cut_B*.tsv | parallel \
+    "python scripts/find_nonred_labels.py \
+    --input {} \
+    --search_tool fs \
+    --remove_cif_ext True"
+
 ls tmp/alis/sample_pf/mm_B*.tsv | parallel "python scripts/find_nonred_labels.py \
     --input {} \
     --search_tool mm \
@@ -316,12 +332,14 @@ tm_file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "tm_B[0-9]*.tsv")
 reseek_file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "reseek_B[0-9]*.tsv")
 fs_file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "fs_cut_B[0-9]*.tsv")
 fs_cif_file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "fs_cut_cif_cut_B[0-9]*.tsv")
+cif_fs_file_paths=$(find ./tmp/alis/sample_pf/ -type f -name "cif_cut_fs_cut_B[0-9]*.tsv")
 
 combined_paths=$(printf "%s\n%s\n%s" "$mm_file_paths" "$cif_file_paths" "$tm_file_paths") # process 3 files at a time
 echo "$combined_paths" | parallel "python scripts/find_evalue_stratified_labels.py --input {}"
 
 combined_paths=$(printf "%s\n%s\n%s" "$reseek_file_paths" "$fs_file_paths" "$fs_cif_file_paths") # process 3 at a time
 echo "$combined_paths" | parallel "python scripts/find_evalue_stratified_labels.py --input {}"
+echo "$cif_fs_file_paths" | parallel "python scripts/find_evalue_stratified_labels.py --input {}"
 python scripts/calc_cve_and_ci.py # Calculates the confidence interval 
 ```
 Then, run the Jupyter notebook (COV_SFFP_stratified_performance) to visualize the performance plots.
@@ -865,6 +883,16 @@ foldseek $options ${tb_db_path} ${pfam_path} ${ali_path} ${tmp_path}
 ali_path="${ali_dir}/tb_pfam_${cut_type}_exh.tsv"
 tmp_path="tmp/fstmp/tb_pf_${cut_type}_cut_exh"
 foldseek $options --exhaustive-search 1 ${tb_db_path} ${pfam_path} ${ali_path} ${tmp_path} # Takes ~20 mins on CC
+
+
+# MMseqs exhaustive
+
+cut_type=mm
+pfam_path=./data/raw/dbs/pfam_cif_cut_clust/pfam
+ali_path="${ali_dir}/tb_pfam_${cut_type}_exh.tsv"
+tmp_path="tmp/fstmp/tb_pf_${cut_type}_exh"
+mmseqs convert2fasta ${tb_db_path} ${tb_db_path}.fasta
+mmseqs easy-search --prefilter-mode 2 -e inf ${tb_db_path}.fasta ${pfam_path}.fasta ${ali_path} ${tmp_path}
 ```
 
 Now, we make a database of T. brucei domains using two different methods. We do the following accordingly:
@@ -934,18 +962,28 @@ ali_path="${ali_dir}/tbpf_pfam_${cut_type}_exh.tsv"
 tmp_path="tmp/fstmp/tbpf_pf_${cut_type}_cut"
 foldseek ${options} ${q_db_tb} ${t_db_pf} ${ali_path} ${tmp_path}
 
+
+cut_type=mm
+tb_db_path=data/raw/dbs/tb_pfam_cif_cut/tb_pfam_cif_cut
+pfam_path=./data/raw/dbs/pfam_cif_cut_clust/pfam
+ali_path="${ali_dir}/tbpf_pfam_${cut_type}_exh.tsv"
+tmp_path="tmp/fstmp/tbpf_pf_${cut_type}_cut"
+mmseqs convert2fasta ${tb_db_path} ${tb_db_path}.fasta
+mmseqs easy-search --prefilter-mode 2 -e inf ${tb_db_path}.fasta ${pfam_path}.fasta ${ali_path} ${tmp_path}
+
 ```
 
 Split the files into smaller chunks to make their memory managable. It takes 6 mins to split the files
 ```
 python scripts/split_txt_file.py --input ./tmp/alis/tbpf_pfam_cif_exh.tsv # The script makes a directory with the same name, and stores the chunks in it
 python scripts/split_txt_file.py --input ./tmp/alis/tbpf_pfam_fs_exh.tsv 
+python scripts/split_txt_file.py --input ./tmp/alis/tbpf_pfam_mm_exh.tsv
 ```
 
 
 Select the first hit of each label. It takes ~ 2 mins on Trillion Node:
 ```
-mkdir -p data/processed/first_label_occ/tbpf_pfam_fs_exh data/processed/first_label_occ/tbpf_pfam_cif_exh
+mkdir -p data/processed/first_label_occ/tbpf_pfam_fs_exh data/processed/first_label_occ/tbpf_pfam_cif_exh data/processed/first_label_occ/tbpf_pfam_mm_exh
 
 ls tmp/alis/tbpf_pfam_fs_exh/part_*.tsv | parallel \
     "python scripts/find_nonred_labels.py \
@@ -954,13 +992,20 @@ ls tmp/alis/tbpf_pfam_fs_exh/part_*.tsv | parallel \
     --remove_cif_ext False \
     --output data/processed/first_label_occ/tbpf_pfam_fs_exh/{/}"
 
-
 ls tmp/alis/tbpf_pfam_cif_exh/part_*.tsv | parallel \
     "python scripts/find_nonred_labels.py \
     --input {} \
     --search_tool fs \
     --remove_cif_ext True \
     --output data/processed/first_label_occ/tbpf_pfam_cif_exh/{/}"
+
+ls tmp/alis/tbpf_pfam_mm_exh/part_*.tsv | parallel \
+    "python scripts/find_nonred_labels.py \
+    --input {} \
+    --search_tool mm \
+    --remove_cif_ext True \
+    --output data/processed/first_label_occ/tbpf_pfam_mm_exh/{/}"
+
 ```
 
 Use the following script to integrate all batches into one
@@ -968,5 +1013,6 @@ Use the following script to integrate all batches into one
 ```
 python ./scripts/integrate_first_occ4tb.py --input_dir "./data/processed/first_label_occ/tbpf_pfam_cif_exh"
 python ./scripts/integrate_first_occ4tb.py --input_dir "./data/processed/first_label_occ/tbpf_pfam_fs_exh"
+python ./scripts/integrate_first_occ4tb.py --input_dir "./data/processed/first_label_occ/tbpf_pfam_mm_exh"
 ```
 

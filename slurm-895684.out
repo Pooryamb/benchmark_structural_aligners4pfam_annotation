@@ -1,0 +1,35 @@
+
+scontrol show job 895684
+JobId=895684 JobName=interactive
+   UserId=pooryamb(3101064) GroupId=pooryamb(3101064) MCS_label=N/A
+   Priority=1385465 Nice=0 Account=def-rsala QOS=normal
+   JobState=COMPLETING Reason=TimeLimit Dependency=(null)
+   Requeue=0 Restarts=0 BatchFlag=0 Reboot=0 ExitCode=0:0
+   RunTime=02:00:25 TimeLimit=02:00:00 TimeMin=N/A
+   SubmitTime=2026-01-26T13:49:44 EligibleTime=2026-01-26T13:49:44
+   AccrueTime=2026-01-26T13:49:44
+   StartTime=2026-01-26T13:50:08 EndTime=2026-01-26T15:50:33 Deadline=N/A
+   SuspendTime=None SecsPreSuspend=0 LastSchedEval=2026-01-26T13:50:08 Scheduler=Backfill
+   Partition=compute AllocNode:Sid=tri-login06:485137
+   ReqNodeList=(null) ExcNodeList=(null)
+   NodeList=tri0019
+   BatchHost=tri0019
+   NumNodes=1 NumCPUs=192 NumTasks=1 CPUs/Task=1 ReqB:S:C:T=0:0:*:*
+   ReqTRES=cpu=1,mem=767000M,node=1,billing=1
+   AllocTRES=cpu=192,mem=767000M,node=1,billing=192
+   Socks/Node=* NtasksPerN:B:S:C=0:0:*:* CoreSpec=*
+   MinCPUsNode=1 MinMemoryNode=767000M MinTmpDiskNode=0
+   Features=(null) DelayBoot=00:00:00
+   OverSubscribe=NO Contiguous=0 Licenses=(null) Network=(null)
+   Command=/bin/sh
+   WorkDir=/scratch/pooryamb/foldseek_vs_reseek4pfam
+   Comment=/opt/slurm/bin/salloc --time 2:00:00 
+   
+
+sacct -j 895684
+JobID           JobName    Account    Elapsed  MaxVMSize     MaxRSS  SystemCPU    UserCPU ExitCode 
+------------ ---------- ---------- ---------- ---------- ---------- ---------- ---------- -------- 
+895684       interacti+  def-rsala   02:00:25                         00:00:00   00:00:00      0:0 
+895684.inte+ interacti+  def-rsala   02:00:25                         00:00:00   00:00:00      0:0 
+895684.exte+     extern  def-rsala   02:00:25                         00:00:00   00:00:00      0:0 
+
