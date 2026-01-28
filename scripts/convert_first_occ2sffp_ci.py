@@ -19,7 +19,7 @@ first_occ_dict = {}
 
 all_tsv_files = glob.glob(f"{data_dir}/processed/first_label_occ/*_B*.tsv")
 tools = set(list([os.path.basename(x).split("_B")[0] for x in all_tsv_files])) # The tools will be reseek, fs_cut, cif_cut, mm, and tm
-file_paths_tool_dict = {x: [y for y in all_tsv_files if x in y] for x in tools} 
+file_paths_tool_dict = {x: [y for y in all_tsv_files if f"{x}_B" in y] for x in tools} 
 
 # As the first occurences were found in parallel computations, the following lines merge the result for each batch
 for tool, tool_tsv_paths in file_paths_tool_dict.items():
